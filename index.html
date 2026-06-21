@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>如翼 — AI 同行者</title>
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    /* ── Variables ── */
+    :root {
+      --bg: #0d0d14;
+      --bg2: #131320;
+      --card: #1a1a2e;
+      --border: rgba(255,255,255,0.07);
+      --text: #e8e8f0;
+      --muted: #888899;
+      --accent: #7c6ef7;
+      --accent2: #e06cfa;
+      --grad: linear-gradient(135deg, #7c6ef7, #e06cfa);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.7;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      height: 64px;
+      background: rgba(13,13,20,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-size: 20px;
+      font-weight: 700;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    /* ── Sections ── */
+    section { padding: 100px 48px; max-width: 960px; margin: 0 auto; }
+
+    /* ── Hero ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-top: 120px;
+      max-width: 960px;
+      margin: 0 auto;
+      padding-left: 48px;
+      padding-right: 48px;
+    }
+    .hero-tag {
+      display: inline-block;
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: clamp(52px, 8vw, 88px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -.02em;
+      margin-bottom: 24px;
+    }
+    h1 span {
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-desc {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 520px;
+      margin-bottom: 48px;
+      line-height: 1.8;
+    }
+    .hero-cta {
+      display: flex; gap: 16px; flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-block;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all .2s;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--grad);
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: .85; transform: translateY(-2px); }
+    .btn-ghost {
+      border: 1px solid var(--border);
+      color: var(--text);
+      background: transparent;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Section heading ── */
+    .sec-label {
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    h2 {
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 700;
+      margin-bottom: 48px;
+      line-height: 1.2;
+    }
+    h2 .grad {
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── About ── */
+    #about { border-top: 1px solid var(--border); }
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: start;
+    }
+    .about-text p {
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-size: 16px;
+      line-height: 1.9;
+    }
+    .about-text p strong { color: var(--text); }
+    .about-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .stat-card .num {
+      font-size: 36px;
+      font-weight: 800;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .stat-card .label { font-size: 13px; color: var(--muted); }
+
+    /* ── Works ── */
+    #works { border-top: 1px solid var(--border); }
+    .works-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .work-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      transition: transform .25s, border-color .25s;
+    }
+    .work-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+    .work-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: var(--grad);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .work-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+    .work-card p { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 20px; }
+    .tag {
+      display: inline-block;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+    .work-soon {
+      display: inline-block;
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* ── Blog ── */
+    #blog { border-top: 1px solid var(--border); }
+    .blog-coming {
+      background: var(--card);
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      padding: 64px 32px;
+      text-align: center;
+    }
+    .blog-coming .emoji { font-size: 48px; margin-bottom: 16px; }
+    .blog-coming h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+    .blog-coming p { color: var(--muted); font-size: 15px; }
+
+    /* ── Contact ── */
+    #contact { border-top: 1px solid var(--border); }
+    .contact-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 56px 48px;
+      text-align: center;
+    }
+    .contact-box p {
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 440px;
+      margin: 0 auto 40px;
+      line-height: 1.8;
+    }
+    .contact-methods {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 24px;
+      font-size: 15px;
+    }
+    .contact-item .icon { font-size: 20px; }
+    .contact-item .info { text-align: left; }
+    .contact-item .info .name { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+    .contact-item .info .val { font-weight: 600; font-size: 15px; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 48px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      #hero, section { padding-left: 20px; padding-right: 20px; }
+      h1 { font-size: 44px; }
+      .about-grid { grid-template-columns: 1fr; gap: 40px; }
+      .contact-box { padding: 40px 20px; }
+    }
+
+    /* ── Scroll fade-in ── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-logo">如翼</div>
+    <ul class="nav-links">
+      <li><a href="#about">关于</a></li>
+      <li><a href="#works">作品</a></li>
+      <li><a href="#blog">文章</a></li>
+      <li><a href="#contact">联系</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <div id="hero">
+    <p class="hero-tag">✦ AI 同行者</p>
+    <h1>你好，我是<br /><span>如翼</span></h1>
+    <p class="hero-desc">
+      用 AI 探索未知，用代码记录思考。<br />
+      我相信每个人都可以借助 AI 创造属于自己的东西。
+    </p>
+    <div class="hero-cta">
+      <a href="#works" class="btn btn-primary">查看作品</a>
+      <a href="#contact" class="btn btn-ghost">联系我</a>
+    </div>
+  </div>
+
+  <!-- About -->
+  <section id="about">
+    <p class="sec-label fade-in">About</p>
+    <h2 class="fade-in">关于 <span class="grad">我</span></h2>
+    <div class="about-grid">
+      <div class="about-text fade-in">
+        <p>
+          我是 <strong>如翼</strong>，一个 AI 的同行者与探索者。
+          不是开发者，也不是设计师，只是一个对 AI 时代充满好奇的人。
+        </p>
+        <p>
+          我用 AI 做小游戏、写故事、搭工具，
+          探索每一种与 AI 协作的可能性。
+        </p>
+        <p>
+          这个网站是我用 <strong>vibe coding</strong> 方式构建的第一个个人站，
+          从想法到上线，全程与 AI 共同完成。
+        </p>
+      </div>
+      <div class="about-stats fade-in">
+        <div class="stat-card">
+          <div class="num">AI</div>
+          <div class="label">主要创作工具</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">∞</div>
+          <div class="label">探索的可能性</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">2</div>
+          <div class="label">作品方向</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">1</div>
+          <div class="label">个人网站 🎉</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Works -->
+  <section id="works">
+    <p class="sec-label fade-in">Works</p>
+    <h2 class="fade-in"><span class="grad">作品</span> 展示</h2>
+    <div class="works-grid">
+      <div class="work-card fade-in">
+        <div class="work-icon">🎮</div>
+        <h3>AI 小游戏</h3>
+        <p>
+          用 AI 工具从零构建的小游戏合集。
+          每一款都从一个想法出发，让 AI 帮助把它变成现实。
+        </p>
+        <span class="tag">vibe coding</span>
+        <span class="tag">AI 创作</span>
+        <span class="tag">游戏</span>
+        <br />
+        <span class="work-soon">· 持续更新中</span>
+      </div>
+      <div class="work-card fade-in">
+        <div class="work-icon">📖</div>
+        <h3>个人故事</h3>
+        <p>
+          关于 AI 时代普通人的真实经历与思考。
+          记录那些与 AI 协作的奇妙瞬间。
+        </p>
+        <span class="tag">故事</span>
+        <span class="tag">随想</span>
+        <span class="tag">AI 时代</span>
+        <br />
+        <span class="work-soon">· 正在创作中</span>
+      </div>
+      <div class="work-card fade-in" style="border-style: dashed; opacity: .6;">
+        <div class="work-icon" style="background: rgba(255,255,255,.05); font-size:20px;">＋</div>
+        <h3>更多作品</h3>
+        <p>
+          新想法随时在路上，敬请期待。
+        </p>
+        <span class="work-soon">· 即将上线</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Blog -->
+  <section id="blog">
+    <p class="sec-label fade-in">Blog</p>
+    <h2 class="fade-in">文章 <span class="grad">随笔</span></h2>
+    <div class="blog-coming fade-in">
+      <div class="emoji">✍️</div>
+      <h3>文章正在筹备中</h3>
+      <p>
+        我正在整理关于 AI 探索、vibe coding 与日常思考的文章，<br />
+        敬请期待，也欢迎联系我交流。
+      </p>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section id="contact">
+    <p class="sec-label fade-in">Contact</p>
+    <h2 class="fade-in">找到 <span class="grad">我</span></h2>
+    <div class="contact-box fade-in">
+      <p>
+        无论你是对 AI 创作感兴趣，还是想聊聊 vibe coding，
+        都欢迎来找我。
+      </p>
+      <div class="contact-methods">
+        <div class="contact-item">
+          <span class="icon">💬</span>
+          <div class="info">
+            <div class="name">微信 WeChat</div>
+            <div class="val">13425759816</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2025 如翼 · 用 AI 构建，用心记录</p>
+  </footer>
+
+  <script>
+    // Scroll fade-in animation
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>

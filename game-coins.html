@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>豆豆吃金币 — 如翼</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0d0d14;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: "PingFang SC", sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    canvas {
+      border-radius: 16px;
+      box-shadow: 0 0 60px rgba(224,108,250,0.3);
+      display: block;
+      touch-action: none;
+    }
+    #score-bar {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 24px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.1);
+      backdrop-filter: blur(8px);
+      border-radius: 50px;
+      padding: 8px 28px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+    #score-bar span { color: #e06cfa; }
+    #overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(13,13,20,0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+    #overlay h1 { font-size: 38px; color: #fff; font-weight: 800; }
+    #overlay p { font-size: 15px; color: #888; text-align: center; line-height: 1.8; }
+    #overlay .highlight { color: #e06cfa; font-size: 22px; font-weight: 700; }
+    #overlay button {
+      margin-top: 8px;
+      padding: 14px 48px;
+      border-radius: 50px;
+      border: none;
+      background: linear-gradient(135deg, #e06cfa, #7c6ef7);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s;
+    }
+    #overlay button:hover { transform: scale(1.05); }
+    /* D-pad controls */
+    #dpad {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: repeat(3, 68px);
+      grid-template-rows: repeat(3, 68px);
+      gap: 6px;
+    }
+    .dp {
+      border-radius: 12px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
+      color: #fff;
+      font-size: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+    .dp:active { background: rgba(224,108,250,.4); }
+    .dp.empty { background: transparent; border: none; pointer-events: none; }
+    #back-link {
+      position: fixed;
+      top: 20px; left: 20px;
+      color: #888;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    #back-link:hover { color: #fff; }
+    @media (min-width: 500px) { #dpad { display: none; } }
+  </style>
+</head>
+<body>
+
+<a href="index.html" id="back-link">← 返回主页</a>
+
+<div id="score-bar">
+  🪙 金币：<span id="score">0</span> &nbsp; ⏱️ 时间：<span id="timer">60</span>s &nbsp; ❤️ <span id="lives">3</span>
+</div>
+
+<canvas id="c"></canvas>
+
+<div id="overlay">
+  <h1>🫧 豆豆吃金币</h1>
+  <p>控制小豆豆吃掉所有金币<br/>躲开幽灵，60秒内吃得越多越好</p>
+  <p>键盘 ← ↑ → ↓ 或点击下方方向键</p>
+  <div id="result" style="display:none">
+    <p class="highlight">得分：<span id="final-score">0</span> 🪙</p>
+  </div>
+  <button id="start-btn">开始游戏</button>
+</div>
+
+<!-- D-pad -->
+<div id="dpad">
+  <div class="dp empty"></div>
+  <div class="dp" id="up-btn">↑</div>
+  <div class="dp empty"></div>
+  <div class="dp" id="left-btn2">←</div>
+  <div class="dp empty"></div>
+  <div class="dp" id="right-btn2">→</div>
+  <div class="dp empty"></div>
+  <div class="dp" id="down-btn">↓</div>
+  <div class="dp empty"></div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const CELL = 28;
+let COLS, ROWS, state = 'idle', animId;
+
+function resize() {
+  const maxW = Math.min(window.innerWidth - 0, 420);
+  const maxH = Math.min(window.innerHeight - 140, 560);
+  COLS = Math.floor(maxW / CELL);
+  ROWS = Math.floor(maxH / CELL);
+  canvas.width = COLS * CELL;
+  canvas.height = ROWS * CELL;
+}
+resize();
+
+// Game variables
+let player, ghosts, coins, walls, score, lives, timerSec, lastTime, frame;
+
+const DIRS = {
+  left:  { dx: -1, dy:  0 },
+  right: { dx:  1, dy:  0 },
+  up:    { dx:  0, dy: -1 },
+  down:  { dx:  0, dy:  1 },
+};
+let nextDir = 'right';
+let curDir  = 'right';
+
+// Ghost colors
+const GHOST_COLORS = ['#ff6b9d','#ff9f43','#48dbfb','#1dd1a1'];
+const GHOST_SCARED = '#7c6ef7';
+
+function initGame() {
+  score = 0;
+  lives = 3;
+  timerSec = 60;
+  frame = 0;
+  nextDir = 'right';
+  curDir  = 'right';
+  document.getElementById('score').textContent = 0;
+  document.getElementById('timer').textContent = 60;
+  document.getElementById('lives').textContent = 3;
+
+  // Walls (border + some inner walls)
+  walls = new Set();
+  // Border
+  for (let c = 0; c < COLS; c++) { walls.add(`${c},0`); walls.add(`${c},${ROWS-1}`); }
+  for (let r = 0; r < ROWS; r++) { walls.add(`0,${r}`); walls.add(`${COLS-1},${r}`); }
+  // Inner walls - cross pattern
+  const mid = { c: Math.floor(COLS/2), r: Math.floor(ROWS/2) };
+  const blocks = [
+    [2,2],[3,2],[2,3],
+    [COLS-4,2],[COLS-3,2],[COLS-3,3],
+    [2,ROWS-4],[3,ROWS-4],[2,ROWS-3],
+    [COLS-4,ROWS-4],[COLS-3,ROWS-4],[COLS-3,ROWS-3],
+    [mid.c-2,mid.r],[mid.c-1,mid.r],[mid.c+1,mid.r],[mid.c+2,mid.r],
+    [mid.c,mid.r-2],[mid.c,mid.r-1],[mid.c,mid.r+1],[mid.c,mid.r+2],
+    [mid.c-3,2],[mid.c+3,2],[mid.c-3,ROWS-3],[mid.c+3,ROWS-3],
+    [2,mid.r-1],[2,mid.r+1],[COLS-3,mid.r-1],[COLS-3,mid.r+1],
+  ];
+  blocks.forEach(([c,r]) => walls.add(`${c},${r}`));
+
+  // Coins (all empty cells except player start & ghost house)
+  coins = new Set();
+  for (let r = 1; r < ROWS-1; r++) {
+    for (let c = 1; c < COLS-1; c++) {
+      if (!walls.has(`${c},${r}`)) coins.add(`${c},${r}`);
+    }
+  }
+  // Player start
+  player = { c: 2, r: 2, px: 2*CELL+CELL/2, py: 2*CELL+CELL/2, mouthAngle: 0, mouthDir: 1 };
+  coins.delete(`${player.c},${player.r}`);
+
+  // Ghosts
+  ghosts = GHOST_COLORS.map((color, i) => ({
+    c: Math.floor(COLS/2) + (i % 2 === 0 ? -1 : 1),
+    r: Math.floor(ROWS/2) + (i < 2 ? -1 : 1),
+    px: 0, py: 0,
+    dir: ['left','right','up','down'][i],
+    color,
+    scared: false,
+    scaredTimer: 0,
+    speed: 0.5 + i * 0.08,
+  }));
+  ghosts.forEach(g => {
+    g.px = g.c * CELL + CELL/2;
+    g.py = g.r * CELL + CELL/2;
+    coins.delete(`${g.c},${g.r}`);
+  });
+}
+
+function canMove(c, r) {
+  return c >= 0 && r >= 0 && c < COLS && r < ROWS && !walls.has(`${c},${r}`);
+}
+
+function movePlayer() {
+  const d = DIRS[nextDir];
+  if (d && canMove(player.c + d.dx, player.r + d.dy)) {
+    curDir = nextDir;
+  }
+  const cd = DIRS[curDir];
+  if (cd && canMove(player.c + cd.dx, player.r + cd.dy)) {
+    player.c += cd.dx;
+    player.r += cd.dy;
+    const key = `${player.c},${player.r}`;
+    if (coins.has(key)) {
+      coins.delete(key);
+      score++;
+      document.getElementById('score').textContent = score;
+    }
+  }
+  // Smooth position
+  player.px += (player.c * CELL + CELL/2 - player.px) * 0.3;
+  player.py += (player.r * CELL + CELL/2 - player.py) * 0.3;
+}
+
+function moveGhosts() {
+  ghosts.forEach(g => {
+    const d = DIRS[g.dir];
+    if (!d || !canMove(g.c + d.dx, g.r + d.dy) || Math.random() < 0.18) {
+      // Pick new direction
+      const possible = Object.keys(DIRS).filter(dk => {
+        const dd = DIRS[dk];
+        return canMove(g.c + dd.dx, g.r + dd.dy);
+      });
+      if (possible.length > 0) {
+        if (!g.scared && Math.random() < 0.5) {
+          // Chase player
+          possible.sort((a, b) => {
+            const da = DIRS[a], db = DIRS[b];
+            const da_d = Math.abs(g.c + da.dx - player.c) + Math.abs(g.r + da.dy - player.r);
+            const db_d = Math.abs(g.c + db.dx - player.c) + Math.abs(g.r + db.dy - player.r);
+            return da_d - db_d;
+          });
+          g.dir = possible[0];
+        } else {
+          g.dir = possible[Math.floor(Math.random() * possible.length)];
+        }
+      }
+    }
+    const nd = DIRS[g.dir];
+    if (nd && canMove(g.c + nd.dx, g.r + nd.dy)) {
+      g.c += nd.dx;
+      g.r += nd.dy;
+    }
+    g.px += (g.c * CELL + CELL/2 - g.px) * 0.3;
+    g.py += (g.r * CELL + CELL/2 - g.py) * 0.3;
+    if (g.scared) g.scaredTimer--;
+    if (g.scaredTimer <= 0) g.scared = false;
+  });
+}
+
+function checkGhostCollision() {
+  for (const g of ghosts) {
+    if (g.c === player.c && g.r === player.r) {
+      if (g.scared) {
+        // Eat ghost
+        g.c = Math.floor(COLS/2);
+        g.r = Math.floor(ROWS/2);
+        g.scared = false;
+        score += 5;
+      } else {
+        lives--;
+        document.getElementById('lives').textContent = lives;
+        // Reset player
+        player.c = 2; player.r = 2;
+        player.px = 2*CELL+CELL/2; player.py = 2*CELL+CELL/2;
+        if (lives <= 0) return 'dead';
+      }
+    }
+  }
+  return null;
+}
+
+// Check power coins (every 20 regular coins, auto scare)
+function checkPowerup() {
+  if (score > 0 && score % 15 === 0) {
+    ghosts.forEach(g => { g.scared = true; g.scaredTimer = 120; });
+  }
+}
+
+// Draw functions
+function drawWalls() {
+  ctx.fillStyle = '#131320';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  walls.forEach(key => {
+    const [c, r] = key.split(',').map(Number);
+    // Gradient wall
+    ctx.fillStyle = '#1e1e35';
+    ctx.fillRect(c*CELL, r*CELL, CELL, CELL);
+    // Glow edge
+    ctx.strokeStyle = 'rgba(124,110,247,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(c*CELL+0.5, r*CELL+0.5, CELL-1, CELL-1);
+  });
+}
+
+function drawCoins() {
+  coins.forEach(key => {
+    const [c, r] = key.split(',').map(Number);
+    const cx = c*CELL + CELL/2, cy = r*CELL + CELL/2;
+    // Glow
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+}
+
+function drawPlayer() {
+  // Mouth animation
+  player.mouthAngle += 0.12 * player.mouthDir;
+  if (player.mouthAngle > 0.4 || player.mouthAngle < 0) player.mouthDir *= -1;
+
+  const angle = { left: Math.PI, right: 0, up: -Math.PI/2, down: Math.PI/2 }[curDir] || 0;
+  const mouth = player.mouthAngle;
+
+  ctx.shadowColor = '#e06cfa';
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = '#e06cfa';
+  ctx.beginPath();
+  ctx.moveTo(player.px, player.py);
+  ctx.arc(player.px, player.py, CELL/2 - 2, angle + mouth, angle + Math.PI*2 - mouth);
+  ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Eye
+  const eyeX = player.px + Math.cos(angle - 0.5) * 5;
+  const eyeY = player.py + Math.sin(angle - 0.5) * 5;
+  ctx.fillStyle = '#0d0d14';
+  ctx.beginPath();
+  ctx.arc(eyeX, eyeY, 2.5, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function drawGhosts() {
+  ghosts.forEach(g => {
+    const color = g.scared ? (g.scaredTimer < 40 && frame % 12 < 6 ? '#fff' : GHOST_SCARED) : g.color;
+    const cx = g.px, cy = g.py;
+    const r = CELL/2 - 2;
+
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = color;
+    // Body
+    ctx.beginPath();
+    ctx.arc(cx, cy - 2, r, Math.PI, 0);
+    // Wavy bottom
+    const segments = 3;
+    const segW = r*2 / segments;
+    ctx.lineTo(cx + r, cy + r);
+    for (let i = 0; i <= segments; i++) {
+      const bx = cx + r - i * segW;
+      const by = cy + r + (i % 2 === 0 ? -4 : 4);
+      ctx.lineTo(bx, by);
+    }
+    ctx.lineTo(cx - r, cy - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Eyes
+    if (!g.scared) {
+      [-5, 5].forEach(ox => {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(cx + ox, cy - 4, 4, 5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#333';
+        ctx.beginPath(); ctx.ellipse(cx + ox + 1, cy - 4, 2, 3, 0, 0, Math.PI*2); ctx.fill();
+      });
+    } else {
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('x x', cx, cy - 2);
+    }
+  });
+}
+
+let lastSec = Date.now();
+let moveTimer = 0;
+const MOVE_INTERVAL = 8; // frames between moves
+
+function gameLoop(timestamp) {
+  if (state !== 'playing') { animId = requestAnimationFrame(gameLoop); return; }
+  frame++;
+
+  // Timer
+  const now = Date.now();
+  if (now - lastSec >= 1000) {
+    lastSec = now;
+    timerSec--;
+    document.getElementById('timer').textContent = timerSec;
+    if (timerSec <= 0) { endGame('timeout'); return; }
+  }
+
+  // Move every N frames
+  moveTimer++;
+  if (moveTimer >= MOVE_INTERVAL) {
+    moveTimer = 0;
+    movePlayer();
+    moveGhosts();
+    checkPowerup();
+    const res = checkGhostCollision();
+    if (res === 'dead') { endGame('dead'); return; }
+    if (coins.size === 0) { endGame('win'); return; }
+  }
+
+  // Draw
+  drawWalls();
+  drawCoins();
+  drawPlayer();
+  drawGhosts();
+
+  animId = requestAnimationFrame(gameLoop);
+}
+
+function endGame(reason) {
+  state = 'idle';
+  const overlay = document.getElementById('overlay');
+  const result = document.getElementById('result');
+  document.getElementById('final-score').textContent = score;
+  result.style.display = 'block';
+
+  if (reason === 'win') {
+    overlay.querySelector('h1').textContent = '🎉 全部吃完！';
+    overlay.querySelector('p').textContent = `太厉害了！`;
+  } else if (reason === 'dead') {
+    overlay.querySelector('h1').textContent = '💀 被抓住了！';
+    overlay.querySelector('p').textContent = '下次注意幽灵！';
+  } else {
+    overlay.querySelector('h1').textContent = '⏰ 时间到！';
+    overlay.querySelector('p').textContent = '60秒结束，看看你的成绩！';
+  }
+  document.getElementById('start-btn').textContent = '再玩一次';
+  overlay.style.display = 'flex';
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (state !== 'playing') return;
+  const map = { ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down',
+                 a:'left', d:'right', w:'up', s:'down' };
+  if (map[e.key]) { nextDir = map[e.key]; e.preventDefault(); }
+});
+
+// Touch swipe
+let touchStart = null;
+canvas.addEventListener('touchstart', e => { touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+canvas.addEventListener('touchend', e => {
+  if (!touchStart || state !== 'playing') return;
+  const dx = e.changedTouches[0].clientX - touchStart.x;
+  const dy = e.changedTouches[0].clientY - touchStart.y;
+  if (Math.abs(dx) > Math.abs(dy)) nextDir = dx > 0 ? 'right' : 'left';
+  else nextDir = dy > 0 ? 'down' : 'up';
+  touchStart = null;
+}, { passive: true });
+
+// D-pad buttons
+document.getElementById('up-btn').addEventListener('pointerdown',    () => { if(state==='playing') nextDir='up'; });
+document.getElementById('down-btn').addEventListener('pointerdown',  () => { if(state==='playing') nextDir='down'; });
+document.getElementById('left-btn2').addEventListener('pointerdown', () => { if(state==='playing') nextDir='left'; });
+document.getElementById('right-btn2').addEventListener('pointerdown',() => { if(state==='playing') nextDir='right'; });
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  document.getElementById('overlay').style.display = 'none';
+  initGame();
+  state = 'playing';
+  lastSec = Date.now();
+  frame = 0;
+  moveTimer = 0;
+});
+
+initGame();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

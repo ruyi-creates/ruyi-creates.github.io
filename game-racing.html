@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>极速躲避 — 如翼</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0d0d14;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: "PingFang SC", sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    canvas {
+      border-radius: 16px;
+      box-shadow: 0 0 60px rgba(124,110,247,0.3);
+      display: block;
+    }
+    #ui {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    #score-display {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-shadow: 0 2px 8px rgba(0,0,0,.5);
+    }
+    #overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(13,13,20,0.88);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    #overlay h1 { font-size: 40px; color: #fff; font-weight: 800; }
+    #overlay .subtitle { font-size: 16px; color: #888; }
+    #overlay .final-score { font-size: 28px; color: #7c6ef7; font-weight: 700; }
+    #overlay button {
+      margin-top: 8px;
+      padding: 14px 48px;
+      border-radius: 50px;
+      border: none;
+      background: linear-gradient(135deg, #7c6ef7, #e06cfa);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      pointer-events: all;
+      transition: transform .15s, opacity .15s;
+    }
+    #overlay button:hover { transform: scale(1.05); }
+    #overlay button:active { opacity: .8; }
+    /* Mobile controls */
+    #controls {
+      position: fixed;
+      bottom: 30px;
+      left: 0; right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+    }
+    .ctrl-btn {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.1);
+      border: 2px solid rgba(255,255,255,.2);
+      color: #fff;
+      font-size: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      pointer-events: all;
+      backdrop-filter: blur(8px);
+    }
+    .ctrl-btn:active { background: rgba(124,110,247,.4); }
+    #back-link {
+      position: fixed;
+      top: 20px; left: 20px;
+      color: #888;
+      text-decoration: none;
+      font-size: 14px;
+      pointer-events: all;
+    }
+    #back-link:hover { color: #fff; }
+  </style>
+</head>
+<body>
+
+<a href="index.html" id="back-link">← 返回主页</a>
+<div id="score-display">分数：<span id="score">0</span> &nbsp;|&nbsp; 最高：<span id="best">0</span></div>
+<canvas id="c"></canvas>
+
+<div id="overlay">
+  <h1>🚗 极速躲避</h1>
+  <p class="subtitle">左右移动，躲开障碍，坚持越久分越高</p>
+  <p class="subtitle">键盘 ← → 或点击下方按钮</p>
+  <div id="final" style="display:none;">
+    <p class="final-score">得分：<span id="final-score">0</span></p>
+  </div>
+  <button id="start-btn">开始游戏</button>
+</div>
+
+<div id="controls">
+  <div class="ctrl-btn" id="left-btn">←</div>
+  <div class="ctrl-btn" id="right-btn">→</div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// Canvas size
+function resize() {
+  const maxW = Math.min(window.innerWidth, 400);
+  const maxH = Math.min(window.innerHeight, 700);
+  canvas.width = maxW;
+  canvas.height = maxH;
+}
+resize();
+window.addEventListener('resize', () => { resize(); });
+
+// Game state
+let state = 'idle'; // idle | playing | dead
+let score = 0, bestScore = 0, frame = 0;
+let speed = 4;
+let laneCount = 3;
+
+// Player
+const player = { lane: 1, y: 0, w: 44, h: 70, x: 0, targetX: 0, moving: false };
+
+// Obstacles
+let obstacles = [];
+let obstacleTimer = 0;
+let obstacleInterval = 80;
+
+// Road lines
+let lineY = [0, 120, 240, 360, 480, 600, 720];
+
+function laneX(lane) {
+  const laneW = canvas.width / laneCount;
+  return laneW * lane + laneW / 2;
+}
+
+function initGame() {
+  score = 0;
+  frame = 0;
+  speed = 4;
+  obstacles = [];
+  obstacleTimer = 0;
+  obstacleInterval = 80;
+  player.lane = 1;
+  player.y = canvas.height - 120;
+  player.x = laneX(1);
+  player.targetX = player.x;
+  lineY = [0, 120, 240, 360, 480, 600, 720];
+  document.getElementById('score').textContent = 0;
+}
+
+// Drawing helpers
+function drawRoad() {
+  // Road bg
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Road surface
+  const roadX = canvas.width * 0.05;
+  const roadW = canvas.width * 0.9;
+  ctx.fillStyle = '#2a2a3e';
+  ctx.beginPath();
+  ctx.roundRect(roadX, 0, roadW, canvas.height, 8);
+  ctx.fill();
+
+  // Lane lines (dashed)
+  ctx.strokeStyle = 'rgba(255,255,200,0.25)';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([30, 24]);
+  for (let i = 1; i < laneCount; i++) {
+    const x = (canvas.width / laneCount) * i;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Speed lines (side decoration)
+  ctx.fillStyle = 'rgba(124,110,247,0.15)';
+  ctx.fillRect(0, 0, roadX, canvas.height);
+  ctx.fillRect(roadX + roadW, 0, canvas.width - roadX - roadW, canvas.height);
+}
+
+function drawCar(x, y, w, h, color, bodyColor, highlight) {
+  const rx = x - w/2, ry = y - h/2;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(x, y + h/2 - 4, w/2 - 4, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Body
+  ctx.fillStyle = bodyColor;
+  ctx.beginPath();
+  ctx.roundRect(rx, ry, w, h, 8);
+  ctx.fill();
+  // Top (cabin)
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.roundRect(rx + 4, ry + h*0.2, w - 8, h*0.45, 6);
+  ctx.fill();
+  // Windshield
+  ctx.fillStyle = 'rgba(150,220,255,0.6)';
+  ctx.beginPath();
+  ctx.roundRect(rx + 7, ry + h*0.22, w - 14, h*0.18, 4);
+  ctx.fill();
+  // Headlights / taillights
+  if (highlight === 'front') {
+    ctx.fillStyle = '#ffe57a';
+    ctx.beginPath(); ctx.ellipse(rx + 8, ry + 8, 5, 4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(rx + w - 8, ry + 8, 5, 4, 0, 0, Math.PI*2); ctx.fill();
+  } else {
+    ctx.fillStyle = '#ff4455';
+    ctx.beginPath(); ctx.ellipse(rx + 8, ry + h - 8, 5, 4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(rx + w - 8, ry + h - 8, 5, 4, 0, 0, Math.PI*2); ctx.fill();
+  }
+  // Wheels
+  ctx.fillStyle = '#111';
+  [rx - 3, rx + w - 3].forEach(wx => {
+    [ry + 12, ry + h - 22].forEach(wy => {
+      ctx.beginPath(); ctx.roundRect(wx, wy, 6, 14, 3); ctx.fill();
+    });
+  });
+}
+
+const obstaclePalettes = [
+  ['#ff6b6b','#cc3344'],
+  ['#f0a500','#c87800'],
+  ['#00d4aa','#009977'],
+  ['#6bcfff','#3399cc'],
+];
+
+function drawObstacle(ob) {
+  const [c, b] = obstaclePalettes[ob.palette];
+  drawCar(ob.x, ob.y, ob.w, ob.h, c, b, 'back');
+}
+
+function drawPlayer() {
+  drawCar(player.x, player.y, player.w, player.h, '#7c6ef7', '#4a3eb0', 'front');
+  // Engine glow
+  ctx.shadowColor = '#7c6ef7';
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = 'rgba(124,110,247,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(player.x, player.y + player.h/2, 14, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function spawnObstacle() {
+  const lane = Math.floor(Math.random() * laneCount);
+  const palette = Math.floor(Math.random() * obstaclePalettes.length);
+  obstacles.push({
+    lane,
+    x: laneX(lane),
+    y: -50,
+    w: 40, h: 68,
+    palette
+  });
+}
+
+function checkCollision() {
+  for (const ob of obstacles) {
+    const dx = Math.abs(player.x - ob.x);
+    const dy = Math.abs(player.y - ob.y);
+    if (dx < (player.w + ob.w) / 2 - 6 && dy < (player.h + ob.h) / 2 - 8) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function drawExplosion(x, y) {
+  const particles = [];
+  for (let i = 0; i < 20; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8,
+      life: 1,
+      r: Math.random() * 10 + 4,
+      color: ['#ff6b6b','#ffa500','#ffff00','#fff'][Math.floor(Math.random()*4)]
+    });
+  }
+  let t = 0;
+  const explode = () => {
+    if (t++ > 30) return;
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+    requestAnimationFrame(explode);
+  };
+  explode();
+}
+
+// Input
+const keys = {};
+document.addEventListener('keydown', e => {
+  if (state !== 'playing') return;
+  if ((e.key === 'ArrowLeft' || e.key === 'a') && player.lane > 0) {
+    player.lane--;
+    player.targetX = laneX(player.lane);
+  }
+  if ((e.key === 'ArrowRight' || e.key === 'd') && player.lane < laneCount - 1) {
+    player.lane++;
+    player.targetX = laneX(player.lane);
+  }
+});
+
+document.getElementById('left-btn').addEventListener('pointerdown', () => {
+  if (state !== 'playing') return;
+  if (player.lane > 0) { player.lane--; player.targetX = laneX(player.lane); }
+});
+document.getElementById('right-btn').addEventListener('pointerdown', () => {
+  if (state !== 'playing') return;
+  if (player.lane < laneCount - 1) { player.lane++; player.targetX = laneX(player.lane); }
+});
+
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawRoad();
+
+  if (state !== 'playing') { requestAnimationFrame(gameLoop); return; }
+
+  frame++;
+  score = Math.floor(frame / 6);
+  document.getElementById('score').textContent = score;
+
+  // Increase speed & spawn rate
+  speed = 4 + score * 0.018;
+  obstacleInterval = Math.max(30, 80 - score * 0.3);
+
+  // Move road lines
+  lineY = lineY.map(y => {
+    y += speed;
+    if (y > canvas.height + 20) y -= canvas.height + 160;
+    return y;
+  });
+
+  // Spawn obstacles
+  obstacleTimer++;
+  if (obstacleTimer >= obstacleInterval) {
+    spawnObstacle();
+    obstacleTimer = 0;
+  }
+
+  // Move obstacles
+  obstacles = obstacles.filter(ob => ob.y < canvas.height + 80);
+  obstacles.forEach(ob => { ob.y += speed; });
+
+  // Smooth player movement
+  player.x += (player.targetX - player.x) * 0.2;
+
+  // Draw obstacles
+  obstacles.forEach(ob => drawObstacle(ob));
+
+  // Draw player
+  drawPlayer();
+
+  // Score display (mini)
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  ctx.roundRect(canvas.width/2 - 60, 12, 120, 32, 16);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`🏁 ${score}`, canvas.width/2, 33);
+
+  // Collision
+  if (checkCollision()) {
+    drawExplosion(player.x, player.y);
+    state = 'dead';
+    if (score > bestScore) bestScore = score;
+    document.getElementById('best').textContent = bestScore;
+    setTimeout(showDead, 600);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+function showDead() {
+  const overlay = document.getElementById('overlay');
+  const finalDiv = document.getElementById('final');
+  overlay.querySelector('h1').textContent = '💥 游戏结束';
+  overlay.querySelector('.subtitle').textContent = '再来一次？';
+  document.getElementById('final-score').textContent = score;
+  finalDiv.style.display = 'block';
+  document.getElementById('start-btn').textContent = '再玩一次';
+  overlay.style.display = 'flex';
+}
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  document.getElementById('overlay').style.display = 'none';
+  initGame();
+  state = 'playing';
+});
+
+initGame();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
