@@ -1,521 +1,401 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>豆豆吃金币 — 如翼</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0d0d14;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      font-family: "PingFang SC", sans-serif;
-      overflow: hidden;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{
+      background:#0d0d14;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      min-height:100vh;overflow:hidden;
+      font-family:"PingFang SC",sans-serif;
+      user-select:none;-webkit-tap-highlight-color:transparent;
     }
-    canvas {
-      border-radius: 16px;
-      box-shadow: 0 0 60px rgba(224,108,250,0.3);
-      display: block;
-      touch-action: none;
+    canvas{display:block;border-radius:10px;box-shadow:0 0 50px rgba(224,108,250,.28);}
+    #hud{
+      position:fixed;top:12px;left:50%;transform:translateX(-50%);
+      display:flex;gap:20px;
+      background:rgba(0,0,0,.6);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.1);border-radius:40px;
+      padding:7px 24px;color:#fff;font-size:14px;font-weight:700;
+      pointer-events:none;white-space:nowrap;
     }
-    #score-bar {
-      position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 24px;
-      background: rgba(255,255,255,.07);
-      border: 1px solid rgba(255,255,255,.1);
-      backdrop-filter: blur(8px);
-      border-radius: 50px;
-      padding: 8px 28px;
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      pointer-events: none;
+    #hud span{color:#e06cfa;}
+    #overlay{
+      position:fixed;inset:0;background:rgba(10,10,18,.92);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
     }
-    #score-bar span { color: #e06cfa; }
-    #overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(13,13,20,0.9);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
+    #overlay h1{font-size:36px;color:#fff;font-weight:800;}
+    #overlay p{font-size:14px;color:#666;text-align:center;line-height:1.9;}
+    #overlay .fs{font-size:24px;color:#e06cfa;font-weight:700;}
+    #overlay button{
+      margin-top:10px;padding:13px 52px;border-radius:50px;border:none;
+      background:linear-gradient(135deg,#e06cfa,#7c6ef7);
+      color:#fff;font-size:17px;font-weight:700;cursor:pointer;
+      transition:transform .15s;
     }
-    #overlay h1 { font-size: 38px; color: #fff; font-weight: 800; }
-    #overlay p { font-size: 15px; color: #888; text-align: center; line-height: 1.8; }
-    #overlay .highlight { color: #e06cfa; font-size: 22px; font-weight: 700; }
-    #overlay button {
-      margin-top: 8px;
-      padding: 14px 48px;
-      border-radius: 50px;
-      border: none;
-      background: linear-gradient(135deg, #e06cfa, #7c6ef7);
-      color: #fff;
-      font-size: 18px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform .15s;
+    #overlay button:hover{transform:scale(1.05);}
+    /* D-pad */
+    #dpad{
+      position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+      display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(3,64px);gap:5px;
     }
-    #overlay button:hover { transform: scale(1.05); }
-    /* D-pad controls */
-    #dpad {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: grid;
-      grid-template-columns: repeat(3, 68px);
-      grid-template-rows: repeat(3, 68px);
-      gap: 6px;
+    .dp{
+      border-radius:10px;background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.15);
+      color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;backdrop-filter:blur(6px);
     }
-    .dp {
-      border-radius: 12px;
-      background: rgba(255,255,255,.1);
-      border: 1px solid rgba(255,255,255,.15);
-      color: #fff;
-      font-size: 26px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-    }
-    .dp:active { background: rgba(224,108,250,.4); }
-    .dp.empty { background: transparent; border: none; pointer-events: none; }
-    #back-link {
-      position: fixed;
-      top: 20px; left: 20px;
-      color: #888;
-      text-decoration: none;
-      font-size: 14px;
-    }
-    #back-link:hover { color: #fff; }
-    @media (min-width: 500px) { #dpad { display: none; } }
+    .dp:active{background:rgba(224,108,250,.4);}
+    .dp.e{background:transparent;border:none;pointer-events:none;}
+    #back{position:fixed;top:16px;left:16px;color:#555;text-decoration:none;font-size:13px;}
+    #back:hover{color:#fff;}
+    @media(min-width:540px){#dpad{display:none;}}
   </style>
 </head>
 <body>
-
-<a href="index.html" id="back-link">← 返回主页</a>
-
-<div id="score-bar">
-  🪙 金币：<span id="score">0</span> &nbsp; ⏱️ 时间：<span id="timer">60</span>s &nbsp; ❤️ <span id="lives">3</span>
-</div>
-
+<a href="index.html" id="back">← 返回</a>
+<div id="hud">🪙 <span id="sc">0</span> &nbsp; ⏱️ <span id="tm">60</span>s &nbsp; 剩余金币 <span id="left">0</span></div>
 <canvas id="c"></canvas>
-
 <div id="overlay">
   <h1>🫧 豆豆吃金币</h1>
-  <p>控制小豆豆吃掉所有金币<br/>躲开幽灵，60秒内吃得越多越好</p>
-  <p>键盘 ← ↑ → ↓ 或点击下方方向键</p>
-  <div id="result" style="display:none">
-    <p class="highlight">得分：<span id="final-score">0</span> 🪙</p>
-  </div>
-  <button id="start-btn">开始游戏</button>
+  <p>吃掉所有金币！碰到幽灵立即结束<br>60秒计时，吃得越多越好</p>
+  <p>方向键 / WASD / 滑动屏幕 控制</p>
+  <div id="fd" style="display:none"><p class="fs">得分：<span id="fsc">0</span> 🪙</p></div>
+  <button id="sbtn">开始游戏</button>
 </div>
-
-<!-- D-pad -->
 <div id="dpad">
-  <div class="dp empty"></div>
-  <div class="dp" id="up-btn">↑</div>
-  <div class="dp empty"></div>
-  <div class="dp" id="left-btn2">←</div>
-  <div class="dp empty"></div>
-  <div class="dp" id="right-btn2">→</div>
-  <div class="dp empty"></div>
-  <div class="dp" id="down-btn">↓</div>
-  <div class="dp empty"></div>
+  <div class="dp e"></div><div class="dp" id="u">↑</div><div class="dp e"></div>
+  <div class="dp" id="l">←</div><div class="dp e"></div><div class="dp" id="r">→</div>
+  <div class="dp e"></div><div class="dp" id="d">↓</div><div class="dp e"></div>
 </div>
 
 <script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const CELL = 28;
-let COLS, ROWS, state = 'idle', animId;
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
 
-function resize() {
-  const maxW = Math.min(window.innerWidth - 0, 420);
-  const maxH = Math.min(window.innerHeight - 140, 560);
-  COLS = Math.floor(maxW / CELL);
-  ROWS = Math.floor(maxH / CELL);
-  canvas.width = COLS * CELL;
-  canvas.height = ROWS * CELL;
+// ── Grid config ──
+const CELL=26;
+let COLS,ROWS,state='idle';
+
+function resize(){
+  const W=Math.min(window.innerWidth,720);
+  const H=Math.min(window.innerHeight-68,600);
+  COLS=Math.floor(W/CELL)|0;
+  ROWS=Math.floor(H/CELL)|0;
+  canvas.width=COLS*CELL;
+  canvas.height=ROWS*CELL;
 }
 resize();
+window.addEventListener('resize',()=>{resize(); if(state==='playing') initGame();});
 
-// Game variables
-let player, ghosts, coins, walls, score, lives, timerSec, lastTime, frame;
+// ── State ──
+let walls,coins,player,ghosts,score,timerSec,lastTick,animId,frame=0;
 
-const DIRS = {
-  left:  { dx: -1, dy:  0 },
-  right: { dx:  1, dy:  0 },
-  up:    { dx:  0, dy: -1 },
-  down:  { dx:  0, dy:  1 },
-};
-let nextDir = 'right';
-let curDir  = 'right';
+// ── Smooth movement system ──
+// Each entity: { c,r (current cell), nc,nr (next cell), prog (0-1), dx,dy, speed }
+// prog 0 = at (c,r), prog 1 = at (nc,nr)
+// pixel pos = lerp(c,nc,prog)*CELL + CELL/2
+function cellPx(e){ return e.c*CELL+CELL/2+(e.nc-e.c)*e.prog*CELL; }
+function cellPy(e){ return e.r*CELL+CELL/2+(e.nr-e.r)*e.prog*CELL; }
+function isWall(c,r){ return c<0||r<0||c>=COLS||r>=ROWS||walls.has(`${c},${r}`); }
 
-// Ghost colors
-const GHOST_COLORS = ['#ff6b9d','#ff9f43','#48dbfb','#1dd1a1'];
-const GHOST_SCARED = '#7c6ef7';
-
-function initGame() {
-  score = 0;
-  lives = 3;
-  timerSec = 60;
-  frame = 0;
-  nextDir = 'right';
-  curDir  = 'right';
-  document.getElementById('score').textContent = 0;
-  document.getElementById('timer').textContent = 60;
-  document.getElementById('lives').textContent = 3;
-
-  // Walls (border + some inner walls)
-  walls = new Set();
+// ── Wall generation ──
+function buildWalls(){
+  walls=new Set();
   // Border
-  for (let c = 0; c < COLS; c++) { walls.add(`${c},0`); walls.add(`${c},${ROWS-1}`); }
-  for (let r = 0; r < ROWS; r++) { walls.add(`0,${r}`); walls.add(`${COLS-1},${r}`); }
-  // Inner walls - cross pattern
-  const mid = { c: Math.floor(COLS/2), r: Math.floor(ROWS/2) };
-  const blocks = [
-    [2,2],[3,2],[2,3],
-    [COLS-4,2],[COLS-3,2],[COLS-3,3],
-    [2,ROWS-4],[3,ROWS-4],[2,ROWS-3],
-    [COLS-4,ROWS-4],[COLS-3,ROWS-4],[COLS-3,ROWS-3],
-    [mid.c-2,mid.r],[mid.c-1,mid.r],[mid.c+1,mid.r],[mid.c+2,mid.r],
-    [mid.c,mid.r-2],[mid.c,mid.r-1],[mid.c,mid.r+1],[mid.c,mid.r+2],
-    [mid.c-3,2],[mid.c+3,2],[mid.c-3,ROWS-3],[mid.c+3,ROWS-3],
-    [2,mid.r-1],[2,mid.r+1],[COLS-3,mid.r-1],[COLS-3,mid.r+1],
+  for(let c=0;c<COLS;c++){ walls.add(`${c},0`); walls.add(`${c},${ROWS-1}`); }
+  for(let r=0;r<ROWS;r++){ walls.add(`0,${r}`); walls.add(`${COLS-1},${r}`); }
+  // Inner blocks — distributed evenly
+  const mc=Math.floor(COLS/2), mr=Math.floor(ROWS/2);
+  const blks=[
+    // Corners
+    [2,2],[3,2],[2,3],[3,3],
+    [COLS-4,2],[COLS-3,2],[COLS-4,3],[COLS-3,3],
+    [2,ROWS-4],[3,ROWS-4],[2,ROWS-3],[3,ROWS-3],
+    [COLS-4,ROWS-4],[COLS-3,ROWS-4],[COLS-4,ROWS-3],[COLS-3,ROWS-3],
+    // Cross arms
+    [mc-3,mr],[mc-2,mr],[mc+2,mr],[mc+3,mr],
+    [mc,mr-3],[mc,mr-2],[mc,mr+2],[mc,mr+3],
+    // Mid-row obstacles
+    [mc-5,3],[mc+5,3],[mc-5,ROWS-4],[mc+5,ROWS-4],
+    [2,mr-1],[2,mr],[2,mr+1],
+    [COLS-3,mr-1],[COLS-3,mr],[COLS-3,mr+1],
+    [mc-1,2],[mc,2],[mc+1,2],
+    [mc-1,ROWS-3],[mc,ROWS-3],[mc+1,ROWS-3],
   ];
-  blocks.forEach(([c,r]) => walls.add(`${c},${r}`));
+  blks.forEach(([c,r])=>{ if(c>0&&r>0&&c<COLS-1&&r<ROWS-1) walls.add(`${c},${r}`); });
+}
 
-  // Coins (all empty cells except player start & ghost house)
-  coins = new Set();
-  for (let r = 1; r < ROWS-1; r++) {
-    for (let c = 1; c < COLS-1; c++) {
-      if (!walls.has(`${c},${r}`)) coins.add(`${c},${r}`);
-    }
-  }
+// ── Init ──
+function initGame(){
+  buildWalls();
+  score=0; timerSec=60; frame=0;
+  document.getElementById('sc').textContent=0;
+  document.getElementById('tm').textContent=60;
+
+  // Coins on every empty cell
+  coins=new Set();
+  for(let r=1;r<ROWS-1;r++)
+    for(let c=1;c<COLS-1;c++)
+      if(!walls.has(`${c},${r}`)) coins.add(`${c},${r}`);
+
   // Player start
-  player = { c: 2, r: 2, px: 2*CELL+CELL/2, py: 2*CELL+CELL/2, mouthAngle: 0, mouthDir: 1 };
-  coins.delete(`${player.c},${player.r}`);
+  const ps={c:2,r:2};
+  player={c:ps.c,r:ps.r,nc:ps.c,nr:ps.r,prog:1,dx:0,dy:0,wdx:1,wdy:0,speed:.16,mouth:0,mdir:1};
+  coins.delete(`${ps.c},${ps.r}`);
 
-  // Ghosts
-  ghosts = GHOST_COLORS.map((color, i) => ({
-    c: Math.floor(COLS/2) + (i % 2 === 0 ? -1 : 1),
-    r: Math.floor(ROWS/2) + (i < 2 ? -1 : 1),
-    px: 0, py: 0,
-    dir: ['left','right','up','down'][i],
-    color,
-    scared: false,
-    scaredTimer: 0,
-    speed: 0.5 + i * 0.08,
-  }));
-  ghosts.forEach(g => {
-    g.px = g.c * CELL + CELL/2;
-    g.py = g.r * CELL + CELL/2;
+  // 3 ghosts
+  const gStarts=[
+    {c:COLS-3,r:ROWS-3,color:'#ff6b9d',speed:.1},
+    {c:COLS-3,r:2,     color:'#ff9f43',speed:.11},
+    {c:Math.floor(COLS/2),r:Math.floor(ROWS/2),color:'#48dbfb',speed:.12},
+  ];
+  ghosts=gStarts.map(g=>{
     coins.delete(`${g.c},${g.r}`);
+    const rd=randomDir(g.c,g.r);
+    return {...g,nc:g.c+rd.dx,nr:g.r+rd.dy,prog:0,dx:rd.dx,dy:rd.dy,scared:false,scaredT:0};
   });
+  document.getElementById('left').textContent=coins.size;
 }
 
-function canMove(c, r) {
-  return c >= 0 && r >= 0 && c < COLS && r < ROWS && !walls.has(`${c},${r}`);
+function randomDir(c,r){
+  const opts=[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}]
+    .filter(d=>!isWall(c+d.dx,r+d.dy));
+  return opts.length ? opts[Math.floor(Math.random()*opts.length)] : {dx:0,dy:0};
 }
 
-function movePlayer() {
-  const d = DIRS[nextDir];
-  if (d && canMove(player.c + d.dx, player.r + d.dy)) {
-    curDir = nextDir;
+// ── Movement ──
+function stepEntity(e, wantDx, wantDy){
+  // Only commit next cell when current move finishes
+  if(e.prog<1){ e.prog=Math.min(1,e.prog+e.speed); return; }
+  // Arrived at nc,nr
+  e.c=e.nc; e.r=e.nr;
+  // Try wanted direction
+  if(!isWall(e.c+wantDx,e.r+wantDy)&&(wantDx!==0||wantDy!==0)){
+    e.dx=wantDx; e.dy=wantDy;
   }
-  const cd = DIRS[curDir];
-  if (cd && canMove(player.c + cd.dx, player.r + cd.dy)) {
-    player.c += cd.dx;
-    player.r += cd.dy;
-    const key = `${player.c},${player.r}`;
-    if (coins.has(key)) {
-      coins.delete(key);
-      score++;
-      document.getElementById('score').textContent = score;
-    }
+  // Try current direction
+  if(!isWall(e.c+e.dx,e.r+e.dy)){
+    e.nc=e.c+e.dx; e.nr=e.r+e.dy; e.prog=0;
+  } else {
+    e.nc=e.c; e.nr=e.r; e.prog=1; // stopped
   }
-  // Smooth position
-  player.px += (player.c * CELL + CELL/2 - player.px) * 0.3;
-  player.py += (player.r * CELL + CELL/2 - player.py) * 0.3;
 }
 
-function moveGhosts() {
-  ghosts.forEach(g => {
-    const d = DIRS[g.dir];
-    if (!d || !canMove(g.c + d.dx, g.r + d.dy) || Math.random() < 0.18) {
-      // Pick new direction
-      const possible = Object.keys(DIRS).filter(dk => {
-        const dd = DIRS[dk];
-        return canMove(g.c + dd.dx, g.r + dd.dy);
-      });
-      if (possible.length > 0) {
-        if (!g.scared && Math.random() < 0.5) {
-          // Chase player
-          possible.sort((a, b) => {
-            const da = DIRS[a], db = DIRS[b];
-            const da_d = Math.abs(g.c + da.dx - player.c) + Math.abs(g.r + da.dy - player.r);
-            const db_d = Math.abs(g.c + db.dx - player.c) + Math.abs(g.r + db.dy - player.r);
-            return da_d - db_d;
-          });
-          g.dir = possible[0];
-        } else {
-          g.dir = possible[Math.floor(Math.random() * possible.length)];
-        }
-      }
-    }
-    const nd = DIRS[g.dir];
-    if (nd && canMove(g.c + nd.dx, g.r + nd.dy)) {
-      g.c += nd.dx;
-      g.r += nd.dy;
-    }
-    g.px += (g.c * CELL + CELL/2 - g.px) * 0.3;
-    g.py += (g.r * CELL + CELL/2 - g.py) * 0.3;
-    if (g.scared) g.scaredTimer--;
-    if (g.scaredTimer <= 0) g.scared = false;
-  });
+function stepGhost(g){
+  if(g.prog<1){ g.prog=Math.min(1,g.prog+g.speed); return; }
+  g.c=g.nc; g.r=g.nr;
+  // Pick next direction — bias toward player
+  const opts=[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}]
+    .filter(d=>!isWall(g.c+d.dx,g.r+d.dy)&&!(d.dx===-g.dx&&d.dy===-g.dy));
+  if(!opts.length) return;
+  let pick;
+  if(!g.scared&&Math.random()<.55){
+    opts.sort((a,b)=>{
+      const da=Math.abs(g.c+a.dx-player.c)+Math.abs(g.r+a.dy-player.r);
+      const db=Math.abs(g.c+b.dx-player.c)+Math.abs(g.r+b.dy-player.r);
+      return da-db;
+    });
+    pick=opts[0];
+  } else { pick=opts[Math.floor(Math.random()*opts.length)]; }
+  g.dx=pick.dx; g.dy=pick.dy;
+  g.nc=g.c+g.dx; g.nr=g.r+g.dy; g.prog=0;
+  if(g.scared){ g.scaredT--; if(g.scaredT<=0) g.scared=false; }
 }
 
-function checkGhostCollision() {
-  for (const g of ghosts) {
-    if (g.c === player.c && g.r === player.r) {
-      if (g.scared) {
-        // Eat ghost
-        g.c = Math.floor(COLS/2);
-        g.r = Math.floor(ROWS/2);
-        g.scared = false;
-        score += 5;
+// ── Collision (pixel distance check) ──
+function checkGhostCollision(){
+  const px=cellPx(player), py=cellPy(player);
+  for(const g of ghosts){
+    const gx=cellPx(g), gy=cellPy(g);
+    const dist=Math.hypot(px-gx,py-gy);
+    if(dist<CELL*.72){
+      if(g.scared){
+        // Eat ghost — reset to center
+        g.c=Math.floor(COLS/2); g.r=Math.floor(ROWS/2);
+        g.nc=g.c; g.nr=g.r; g.prog=1;
+        g.scared=false; score+=5;
       } else {
-        lives--;
-        document.getElementById('lives').textContent = lives;
-        // Reset player
-        player.c = 2; player.r = 2;
-        player.px = 2*CELL+CELL/2; player.py = 2*CELL+CELL/2;
-        if (lives <= 0) return 'dead';
+        return 'dead';
       }
     }
   }
   return null;
 }
 
-// Check power coins (every 20 regular coins, auto scare)
-function checkPowerup() {
-  if (score > 0 && score % 15 === 0) {
-    ghosts.forEach(g => { g.scared = true; g.scaredTimer = 120; });
-  }
-}
-
-// Draw functions
-function drawWalls() {
-  ctx.fillStyle = '#131320';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  walls.forEach(key => {
-    const [c, r] = key.split(',').map(Number);
-    // Gradient wall
-    ctx.fillStyle = '#1e1e35';
-    ctx.fillRect(c*CELL, r*CELL, CELL, CELL);
-    // Glow edge
-    ctx.strokeStyle = 'rgba(124,110,247,0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(c*CELL+0.5, r*CELL+0.5, CELL-1, CELL-1);
+// ── Drawing ──
+function drawWalls(){
+  ctx.fillStyle='#0e0e1e';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  walls.forEach(key=>{
+    const[c,r]=key.split(',').map(Number);
+    ctx.fillStyle='#1a1a30';
+    ctx.fillRect(c*CELL,r*CELL,CELL,CELL);
+    ctx.strokeStyle='rgba(100,90,200,0.4)';
+    ctx.lineWidth=1;
+    ctx.strokeRect(c*CELL+.5,r*CELL+.5,CELL-1,CELL-1);
   });
 }
 
-function drawCoins() {
-  coins.forEach(key => {
-    const [c, r] = key.split(',').map(Number);
-    const cx = c*CELL + CELL/2, cy = r*CELL + CELL/2;
-    // Glow
-    ctx.shadowColor = '#ffd700';
-    ctx.shadowBlur = 8;
-    ctx.fillStyle = '#ffd700';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 4, 0, Math.PI*2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
+let coinPulse=0;
+function drawCoins(){
+  coinPulse+=0.06;
+  const glow=4+Math.sin(coinPulse)*2;
+  coins.forEach(key=>{
+    const[c,r]=key.split(',').map(Number);
+    const cx=c*CELL+CELL/2, cy=r*CELL+CELL/2;
+    ctx.shadowColor='#ffd700'; ctx.shadowBlur=glow;
+    ctx.fillStyle='#ffd700';
+    ctx.beginPath(); ctx.arc(cx,cy,4.5,0,Math.PI*2); ctx.fill();
+    // Inner shine
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,200,0.7)';
+    ctx.beginPath(); ctx.arc(cx-1.2,cy-1.2,1.8,0,Math.PI*2); ctx.fill();
   });
+  ctx.shadowBlur=0;
 }
 
-function drawPlayer() {
-  // Mouth animation
-  player.mouthAngle += 0.12 * player.mouthDir;
-  if (player.mouthAngle > 0.4 || player.mouthAngle < 0) player.mouthDir *= -1;
-
-  const angle = { left: Math.PI, right: 0, up: -Math.PI/2, down: Math.PI/2 }[curDir] || 0;
-  const mouth = player.mouthAngle;
-
-  ctx.shadowColor = '#e06cfa';
-  ctx.shadowBlur = 14;
-  ctx.fillStyle = '#e06cfa';
+function drawPlayer(){
+  const px=cellPx(player), py=cellPy(player);
+  player.mouth+=0.14*player.mdir;
+  if(player.mouth>0.42||player.mouth<0) player.mdir*=-1;
+  const angle=Math.atan2(player.dy,player.dx);
+  const m=player.mouth;
+  ctx.shadowColor='#e06cfa'; ctx.shadowBlur=16;
+  ctx.fillStyle='#e06cfa';
   ctx.beginPath();
-  ctx.moveTo(player.px, player.py);
-  ctx.arc(player.px, player.py, CELL/2 - 2, angle + mouth, angle + Math.PI*2 - mouth);
-  ctx.closePath();
-  ctx.fill();
-  ctx.shadowBlur = 0;
-
+  ctx.moveTo(px,py);
+  ctx.arc(px,py,CELL/2-2,angle+m,angle+Math.PI*2-m);
+  ctx.closePath(); ctx.fill();
+  ctx.shadowBlur=0;
   // Eye
-  const eyeX = player.px + Math.cos(angle - 0.5) * 5;
-  const eyeY = player.py + Math.sin(angle - 0.5) * 5;
-  ctx.fillStyle = '#0d0d14';
-  ctx.beginPath();
-  ctx.arc(eyeX, eyeY, 2.5, 0, Math.PI*2);
-  ctx.fill();
+  const ex=px+Math.cos(angle-.5)*6, ey=py+Math.sin(angle-.5)*6;
+  ctx.fillStyle='#0d0d14';
+  ctx.beginPath(); ctx.arc(ex,ey,2.5,0,Math.PI*2); ctx.fill();
 }
 
-function drawGhosts() {
-  ghosts.forEach(g => {
-    const color = g.scared ? (g.scaredTimer < 40 && frame % 12 < 6 ? '#fff' : GHOST_SCARED) : g.color;
-    const cx = g.px, cy = g.py;
-    const r = CELL/2 - 2;
-
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 10;
-    ctx.fillStyle = color;
-    // Body
-    ctx.beginPath();
-    ctx.arc(cx, cy - 2, r, Math.PI, 0);
-    // Wavy bottom
-    const segments = 3;
-    const segW = r*2 / segments;
-    ctx.lineTo(cx + r, cy + r);
-    for (let i = 0; i <= segments; i++) {
-      const bx = cx + r - i * segW;
-      const by = cy + r + (i % 2 === 0 ? -4 : 4);
-      ctx.lineTo(bx, by);
+function drawGhosts(){
+  ghosts.forEach(g=>{
+    const gx=cellPx(g), gy=cellPy(g);
+    const r=CELL/2-2;
+    const flash=g.scared&&g.scaredT<50&&frame%14<7;
+    const col=g.scared?(flash?'#ffffff':'#7c6ef7'):g.color;
+    ctx.shadowColor=col; ctx.shadowBlur=10;
+    ctx.fillStyle=col;
+    // Head
+    ctx.beginPath(); ctx.arc(gx,gy-2,r,Math.PI,0); ctx.lineTo(gx+r,gy+r);
+    // Wavy skirt
+    const seg=3,sw=r*2/seg;
+    for(let i=seg;i>=0;i--){
+      const bx=gx+r-i*sw, by=gy+r+(i%2===0?-5:5);
+      ctx.lineTo(bx,by);
     }
-    ctx.lineTo(cx - r, cy - 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
+    ctx.lineTo(gx-r,gy-2); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur=0;
     // Eyes
-    if (!g.scared) {
-      [-5, 5].forEach(ox => {
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.ellipse(cx + ox, cy - 4, 4, 5, 0, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#333';
-        ctx.beginPath(); ctx.ellipse(cx + ox + 1, cy - 4, 2, 3, 0, 0, Math.PI*2); ctx.fill();
+    if(!g.scared){
+      [-5,5].forEach(ox=>{
+        ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(gx+ox,gy-4,4,5,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#1a1a3e'; ctx.beginPath(); ctx.ellipse(gx+ox+1,gy-3,2,3,0,0,Math.PI*2); ctx.fill();
       });
     } else {
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('x x', cx, cy - 2);
+      ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('×  ×',gx,gy-1);
     }
   });
 }
 
-let lastSec = Date.now();
-let moveTimer = 0;
-const MOVE_INTERVAL = 8; // frames between moves
-
-function gameLoop(timestamp) {
-  if (state !== 'playing') { animId = requestAnimationFrame(gameLoop); return; }
-  frame++;
-
-  // Timer
-  const now = Date.now();
-  if (now - lastSec >= 1000) {
-    lastSec = now;
-    timerSec--;
-    document.getElementById('timer').textContent = timerSec;
-    if (timerSec <= 0) { endGame('timeout'); return; }
+// ── Game tick ──
+function tick(){
+  // Move player
+  stepEntity(player, player.wdx, player.wdy);
+  // Pick up coin
+  const key=`${player.c},${player.r}`;
+  if(coins.has(key)){
+    coins.delete(key);
+    score++;
+    document.getElementById('sc').textContent=score;
+    document.getElementById('left').textContent=coins.size;
+    if(score>0&&score%15===0) ghosts.forEach(g=>{g.scared=true;g.scaredT=150;});
+    if(coins.size===0){ endGame('win'); return; }
   }
+  // Move ghosts
+  ghosts.forEach(g=>stepGhost(g));
+  // Collision
+  const res=checkGhostCollision();
+  if(res==='dead'){ endGame('dead'); return; }
+}
 
-  // Move every N frames
-  moveTimer++;
-  if (moveTimer >= MOVE_INTERVAL) {
-    moveTimer = 0;
-    movePlayer();
-    moveGhosts();
-    checkPowerup();
-    const res = checkGhostCollision();
-    if (res === 'dead') { endGame('dead'); return; }
-    if (coins.size === 0) { endGame('win'); return; }
-  }
-
-  // Draw
+// ── Render ──
+function render(){
   drawWalls();
   drawCoins();
   drawPlayer();
   drawGhosts();
-
-  animId = requestAnimationFrame(gameLoop);
 }
 
-function endGame(reason) {
-  state = 'idle';
-  const overlay = document.getElementById('overlay');
-  const result = document.getElementById('result');
-  document.getElementById('final-score').textContent = score;
-  result.style.display = 'block';
-
-  if (reason === 'win') {
-    overlay.querySelector('h1').textContent = '🎉 全部吃完！';
-    overlay.querySelector('p').textContent = `太厉害了！`;
-  } else if (reason === 'dead') {
-    overlay.querySelector('h1').textContent = '💀 被抓住了！';
-    overlay.querySelector('p').textContent = '下次注意幽灵！';
-  } else {
-    overlay.querySelector('h1').textContent = '⏰ 时间到！';
-    overlay.querySelector('p').textContent = '60秒结束，看看你的成绩！';
-  }
-  document.getElementById('start-btn').textContent = '再玩一次';
-  overlay.style.display = 'flex';
+let lastSec=0;
+function loop(ts){
+  if(state!=='playing'){ animId=requestAnimationFrame(loop); return; }
+  frame++;
+  // Timer
+  if(!lastSec) lastSec=ts;
+  if(ts-lastSec>=1000){ lastSec=ts; timerSec--; document.getElementById('tm').textContent=timerSec; }
+  if(timerSec<=0){ endGame('timeout'); return; }
+  // 60fps consistent tick
+  tick();
+  render();
+  animId=requestAnimationFrame(loop);
 }
 
-// Keyboard
-document.addEventListener('keydown', e => {
-  if (state !== 'playing') return;
-  const map = { ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down',
-                 a:'left', d:'right', w:'up', s:'down' };
-  if (map[e.key]) { nextDir = map[e.key]; e.preventDefault(); }
+function endGame(reason){
+  state='idle';
+  const ov=document.getElementById('overlay');
+  document.getElementById('fsc').textContent=score;
+  document.getElementById('fd').style.display='block';
+  ov.querySelector('h1').textContent= reason==='win'?'🎉 全部吃完！': reason==='dead'?'💀 被幽灵抓住了！':'⏰ 时间到！';
+  ov.querySelector('p').textContent= reason==='win'?'完美！你吃掉了所有金币！': reason==='dead'?'小心幽灵，下次一定！':'60秒结束，看看你的成绩！';
+  document.getElementById('sbtn').textContent='再玩一次';
+  ov.style.display='flex';
+}
+
+// ── Input ──
+document.addEventListener('keydown',e=>{
+  if(state!=='playing') return;
+  const m={ArrowLeft:{dx:-1,dy:0},ArrowRight:{dx:1,dy:0},ArrowUp:{dx:0,dy:-1},ArrowDown:{dx:0,dy:1},
+           a:{dx:-1,dy:0},d:{dx:1,dy:0},w:{dx:0,dy:-1},s:{dx:0,dy:1}};
+  if(m[e.key]){ player.wdx=m[e.key].dx; player.wdy=m[e.key].dy; e.preventDefault(); }
+});
+const dmap={l:{dx:-1,dy:0},r:{dx:1,dy:0},u:{dx:0,dy:-1},d:{dx:0,dy:1}};
+Object.entries(dmap).forEach(([id,d])=>{
+  document.getElementById(id).addEventListener('pointerdown',()=>{
+    if(state==='playing'){ player.wdx=d.dx; player.wdy=d.dy; }
+  });
+});
+// Swipe
+let ts0=null;
+canvas.addEventListener('touchstart',e=>{ ts0={x:e.touches[0].clientX,y:e.touches[0].clientY}; },{passive:true});
+canvas.addEventListener('touchend',e=>{
+  if(!ts0||state!=='playing') return;
+  const dx=e.changedTouches[0].clientX-ts0.x, dy=e.changedTouches[0].clientY-ts0.y;
+  if(Math.abs(dx)>Math.abs(dy)){ player.wdx=dx>0?1:-1; player.wdy=0; }
+  else { player.wdx=0; player.wdy=dy>0?1:-1; }
+  ts0=null;
+},{passive:true});
+
+document.getElementById('sbtn').addEventListener('click',()=>{
+  document.getElementById('fd').style.display='none';
+  document.getElementById('overlay').style.display='none';
+  initGame(); state='playing'; lastSec=0; frame=0;
+  cancelAnimationFrame(animId);
+  animId=requestAnimationFrame(loop);
 });
 
-// Touch swipe
-let touchStart = null;
-canvas.addEventListener('touchstart', e => { touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
-canvas.addEventListener('touchend', e => {
-  if (!touchStart || state !== 'playing') return;
-  const dx = e.changedTouches[0].clientX - touchStart.x;
-  const dy = e.changedTouches[0].clientY - touchStart.y;
-  if (Math.abs(dx) > Math.abs(dy)) nextDir = dx > 0 ? 'right' : 'left';
-  else nextDir = dy > 0 ? 'down' : 'up';
-  touchStart = null;
-}, { passive: true });
-
-// D-pad buttons
-document.getElementById('up-btn').addEventListener('pointerdown',    () => { if(state==='playing') nextDir='up'; });
-document.getElementById('down-btn').addEventListener('pointerdown',  () => { if(state==='playing') nextDir='down'; });
-document.getElementById('left-btn2').addEventListener('pointerdown', () => { if(state==='playing') nextDir='left'; });
-document.getElementById('right-btn2').addEventListener('pointerdown',() => { if(state==='playing') nextDir='right'; });
-
-document.getElementById('start-btn').addEventListener('click', () => {
-  document.getElementById('overlay').style.display = 'none';
-  initGame();
-  state = 'playing';
-  lastSec = Date.now();
-  frame = 0;
-  moveTimer = 0;
-});
-
-initGame();
-requestAnimationFrame(gameLoop);
+initGame(); render();
+animId=requestAnimationFrame(loop);
 </script>
 </body>
 </html>
