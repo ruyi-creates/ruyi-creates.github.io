@@ -24,7 +24,7 @@
     .shell{width:min(1180px,100vw);height:100vh;margin:0 auto;display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:12px}
     .hud,.tower-bar,.toast,.modal-card{
       border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.045));
-      box-shadow:0 18px 60px rgba(0,0,0,.28);backdrop-filter:blur(14px);
+      box-shadow:0 12px 36px rgba(0,0,0,.24);
     }
     .hud{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:22px}
     .brand{display:flex;align-items:center;gap:9px;min-width:0}
@@ -136,7 +136,9 @@
     const modalTitle = document.getElementById('modalTitle');
     const modalText = document.getElementById('modalText');
 
-    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const IS_MOBILE = matchMedia('(max-width: 820px)').matches || navigator.maxTouchPoints > 1;
+    const DPR = IS_MOBILE ? 1 : Math.min(window.devicePixelRatio || 1, 1.25);
+    const FRAME_MS = IS_MOBILE ? 33 : 25;
     const towers = {
       arrow: {name:'光箭塔', cost:50, range:128, cooldown:.46, damage:8, color:'#a78bfa', kind:'single'},
       magic: {name:'星咒塔', cost:80, range:138, cooldown:1.08, damage:22, color:'#22d3ee', kind:'single'},
@@ -154,10 +156,10 @@
       tank:{name:'石甲怪', hp:90, speed:36, reward:24, leak:2, color:'#9ca3af'}
     };
 
-    let W=0,H=0,path=[],slots=[];
+    let W=0,H=0,path=[],slots=[],totalPathLen=0,staticLayer=null,staticCtx=null;
     let selected='arrow', gold=220, life=10, waveIndex=0, running=false, finished=false;
     let enemies=[], placed=[], shots=[], particles=[], floats=[];
-    let spawnQueue=[], spawnTimer=0, last=performance.now(), toastTimer=0;
+    let spawnQueue=[], spawnTimer=0, last=performance.now(), lastDraw=0, toastTimer=0;
 
     function resize(){
       const rect = canvas.parentElement.getBoundingClientRect();
@@ -167,6 +169,7 @@
       canvas.height = Math.floor(H * DPR);
       ctx.setTransform(DPR,0,0,DPR,0,0);
       buildMap();
+      buildStaticLayer();
     }
     function buildMap(){
       const y = H * .52;
@@ -174,6 +177,8 @@
         {x:W*.06,y},{x:W*.24,y},{x:W*.38,y:H*.38},{x:W*.58,y:H*.38},
         {x:W*.72,y:H*.58},{x:W*.94,y:H*.58}
       ];
+      totalPathLen = 0;
+      for(let i=0;i<path.length-1;i++) totalPathLen += distance(path[i],path[i+1]);
       slots = [
         {x:W*.24,y:H*.32,r:26,tower:null},
         {x:W*.47,y:H*.58,r:26,tower:null},
@@ -192,7 +197,7 @@
       slots.forEach(s=>s.tower=null); modal.classList.remove('show');
       document.querySelectorAll('.tower-btn').forEach(b=>b.classList.toggle('active', b.dataset.tower === selected));
       setStatus('准备防守','选择一个塔，然后点击地图上的发光塔位。第 1 关不能升级，但四种塔都能建造。');
-      updateHud(); updateStartButton(); addBurst(W*.5,H*.5,'#7c6ef7',20,.9);
+      updateHud(); updateStartButton(); addBurst(W*.5,H*.5,'#7c6ef7',10,.7);
     }
     function updateHud(){
       goldEl.textContent = gold;
@@ -211,7 +216,7 @@
     function distance(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
     function lerp(a,b,t){ return a+(b-a)*t; }
     function pathLength(){
-      let len=0; for(let i=0;i<path.length-1;i++) len += distance(path[i],path[i+1]); return len;
+      return totalPathLen;
     }
     function pointOnPath(dist){
       let left = dist;
@@ -266,7 +271,7 @@
       if(!e || !e.alive) return;
       e.hp -= dmg; e.hit = .08;
       addFloat(e.x,e.y-24,Math.round(dmg),color);
-      addBurst(e.x,e.y,color,splash?14:7,splash?.5:.35);
+      addBurst(e.x,e.y,color,splash?7:3,splash?.42:.28);
       if(e.hp <= 0){
         e.alive=false;
         const def = enemyDefs[e.type]; gold += def.reward;
@@ -313,7 +318,7 @@
         e.slow = Math.max(0, e.slow - dt); e.hit = Math.max(0, e.hit - dt);
         e.dist += e.speed * slowFactor * dt;
         if(e.dist >= totalLen){
-          e.alive=false; life -= enemyDefs[e.type].leak; addBurst(path[path.length-1].x,path[path.length-1].y,'#fb7185',20,.65);
+          e.alive=false; life -= enemyDefs[e.type].leak; addBurst(path[path.length-1].x,path[path.length-1].y,'#fb7185',9,.55);
           updateHud();
           if(life <= 0) finish(false);
         } else {
@@ -329,15 +334,15 @@
       if(!spawnQueue.length && !enemies.length){
         running=false; waveIndex++; updateHud();
         if(waveIndex >= waves.length) finish(true);
-        else { setStatus(`第 ${waveIndex} 波守住了`,`灵感核心还剩 ${life} 点。可以继续补塔，然后开始下一波。`); addBurst(W*.5,H*.18,'#86efac',24,.7); }
+        else { setStatus(`第 ${waveIndex} 波守住了`,`灵感核心还剩 ${life} 点。可以继续补塔，然后开始下一波。`); addBurst(W*.5,H*.18,'#86efac',10,.6); }
         updateStartButton();
       }
     }
     function updateEffects(dt){
       particles.forEach(p=>{ p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=p.g*dt; p.r*=.985; });
       floats.forEach(f=>{ f.life-=dt; f.y-=24*dt; f.alpha=Math.max(0,f.life/f.max); });
-      particles = particles.filter(p=>p.life>0 && p.r>.4).slice(-130);
-      floats = floats.filter(f=>f.life>0).slice(-28);
+      particles = particles.filter(p=>p.life>0 && p.r>.4).slice(IS_MOBILE ? -45 : -70);
+      floats = floats.filter(f=>f.life>0).slice(-18);
       if(toastTimer>0){ toastTimer-=dt; if(toastTimer<=0) toastEl.classList.remove('show'); }
     }
     function finish(win){
@@ -345,7 +350,7 @@
       if(win){
         modalTitle.textContent='防守成功';
         modalText.textContent=`第一道入口守住了，灵感核心开始重新发光。剩余核心生命：${life}/10。`;
-        addBurst(W*.5,H*.5,'#facc15',48,1.2);
+        addBurst(W*.5,H*.5,'#facc15',18,.9);
       } else {
         modalTitle.textContent='核心失守';
         modalText.textContent='混沌突破了入口。调整塔位组合，再试一次吧。';
@@ -360,31 +365,42 @@
       }
     }
     function addSummon(x,y,color){
-      addBurst(x,y,color,22,.55);
+      addBurst(x,y,color,10,.46);
       particles.push({x,y,r:38,vx:0,vy:0,life:.42,g:0,color,ring:true});
     }
     function addDeath(e){
       const color = e.type==='runner' ? '#fb923c' : e.type==='tank' ? '#c4b5fd' : '#34d399';
-      addBurst(e.x,e.y,color,e.type==='tank'?20:14,e.type==='runner'?.75:.55);
+      addBurst(e.x,e.y,color,e.type==='tank'?10:7,e.type==='runner'?.62:.48);
+    }
+    function buildStaticLayer(){
+      staticLayer = document.createElement('canvas');
+      staticLayer.width = Math.floor(W * DPR);
+      staticLayer.height = Math.floor(H * DPR);
+      staticCtx = staticLayer.getContext('2d');
+      staticCtx.setTransform(DPR,0,0,DPR,0,0);
+      const c = staticCtx;
+      const g=c.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0b1020'); g.addColorStop(1,'#070914'); c.fillStyle=g; c.fillRect(0,0,W,H);
+      c.strokeStyle='rgba(255,255,255,.026)'; c.lineWidth=1;
+      for(let x=0;x<W;x+=56){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke();}
+      for(let y=0;y<H;y+=56){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();}
+      const rg=c.createRadialGradient(W*.22,H*.24,0,W*.22,H*.24,W*.36); rg.addColorStop(0,'rgba(224,108,250,.10)'); rg.addColorStop(1,'transparent'); c.fillStyle=rg; c.fillRect(0,0,W,H);
+      drawPath(c);
     }
     function drawBg(){
-      const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0b1020'); g.addColorStop(1,'#070914'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      ctx.strokeStyle='rgba(255,255,255,.035)'; ctx.lineWidth=1;
-      for(let x=0;x<W;x+=42){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-      for(let y=0;y<H;y+=42){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-      const rg=ctx.createRadialGradient(W*.22,H*.24,0,W*.22,H*.24,W*.4); rg.addColorStop(0,'rgba(224,108,250,.13)'); rg.addColorStop(1,'transparent'); ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+      if(staticLayer) ctx.drawImage(staticLayer,0,0,W,H);
+      else { ctx.fillStyle='#070914'; ctx.fillRect(0,0,W,H); }
     }
-    function drawPath(){
-      ctx.lineCap='round'; ctx.lineJoin='round';
-      ctx.strokeStyle='rgba(255,255,255,.09)'; ctx.lineWidth=48; drawPolyline();
-      ctx.strokeStyle='rgba(124,110,247,.24)'; ctx.lineWidth=34; drawPolyline();
-      ctx.strokeStyle='rgba(6,182,212,.18)'; ctx.lineWidth=6; ctx.setLineDash([14,18]); drawPolyline(); ctx.setLineDash([]);
-      ctx.fillStyle='rgba(52,211,153,.16)'; ctx.beginPath(); ctx.arc(path[0].x,path[0].y,18,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(250,204,21,.23)'; ctx.beginPath(); ctx.arc(path[path.length-1].x,path[path.length-1].y,24,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#d9f99d'; ctx.font='700 12px sans-serif'; ctx.fillText('入口',path[0].x-14,path[0].y-30);
-      ctx.fillStyle='#fde68a'; ctx.fillText('核心',path[path.length-1].x-14,path[path.length-1].y-34);
+    function drawPath(c=ctx){
+      c.lineCap='round'; c.lineJoin='round';
+      c.strokeStyle='rgba(255,255,255,.08)'; c.lineWidth=46; drawPolyline(c);
+      c.strokeStyle='rgba(124,110,247,.22)'; c.lineWidth=32; drawPolyline(c);
+      c.strokeStyle='rgba(6,182,212,.16)'; c.lineWidth=5; c.setLineDash([14,18]); drawPolyline(c); c.setLineDash([]);
+      c.fillStyle='rgba(52,211,153,.16)'; c.beginPath(); c.arc(path[0].x,path[0].y,18,0,Math.PI*2); c.fill();
+      c.fillStyle='rgba(250,204,21,.23)'; c.beginPath(); c.arc(path[path.length-1].x,path[path.length-1].y,24,0,Math.PI*2); c.fill();
+      c.fillStyle='#d9f99d'; c.font='700 12px sans-serif'; c.fillText('入口',path[0].x-14,path[0].y-30);
+      c.fillStyle='#fde68a'; c.fillText('核心',path[path.length-1].x-14,path[path.length-1].y-34);
     }
-    function drawPolyline(){ ctx.beginPath(); ctx.moveTo(path[0].x,path[0].y); for(let i=1;i<path.length;i++) ctx.lineTo(path[i].x,path[i].y); ctx.stroke(); }
+    function drawPolyline(c=ctx){ c.beginPath(); c.moveTo(path[0].x,path[0].y); for(let i=1;i<path.length;i++) c.lineTo(path[i].x,path[i].y); c.stroke(); }
     function drawSlots(){
       slots.forEach((s,i)=>{
         if(s.tower) return;
@@ -399,13 +415,13 @@
     function drawTower(t){
       const cfg=towers[t.type];
       ctx.save(); ctx.translate(t.x,t.y);
-      ctx.shadowColor=cfg.color; ctx.shadowBlur=14;
+      ctx.shadowColor=cfg.color; ctx.shadowBlur=IS_MOBILE ? 0 : 7;
       if(t.type==='barracks'){
         ctx.fillStyle='rgba(255,255,255,.1)'; ctx.beginPath(); ctx.roundRect(-22,-16,44,36,10); ctx.fill();
         ctx.fillStyle=cfg.color; ctx.beginPath(); ctx.roundRect(-16,-24,32,38,12); ctx.fill();
         ctx.shadowBlur=0; ctx.strokeStyle='rgba(124,110,247,.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,-1,22,Math.PI*.08,Math.PI*.92); ctx.stroke();
         for(let i=0;i<2;i++){
-          const ox = i ? 15 : -15, bob=Math.sin(performance.now()/260+i)*2;
+          const ox = i ? 15 : -15, bob=Math.sin(performance.now()/360+i)*1.4;
           ctx.fillStyle='#eef6ff'; ctx.beginPath(); ctx.arc(ox,24+bob,7,0,Math.PI*2); ctx.fill();
           ctx.strokeStyle='rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(ox-7,22+bob,8,Math.PI*.9,Math.PI*1.55); ctx.stroke();
           ctx.beginPath(); ctx.arc(ox+7,22+bob,8,Math.PI*1.45,Math.PI*.1); ctx.stroke();
@@ -424,7 +440,7 @@
       for(const e of enemies){
         const def=enemyDefs[e.type]; ctx.save(); ctx.translate(e.x,e.y);
         if(e.hit>0){ ctx.globalAlpha=.92; ctx.fillStyle='#fff'; } else ctx.fillStyle=def.color;
-        ctx.shadowColor=def.color; ctx.shadowBlur=12;
+        ctx.shadowColor=def.color; ctx.shadowBlur=IS_MOBILE ? 0 : 6;
         if(e.type==='runner'){ ctx.rotate(e.angle); ctx.beginPath(); ctx.ellipse(0,0,16,10,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.5)'; ctx.fillRect(-20,-2,8,4); }
         else if(e.type==='tank'){ ctx.beginPath(); ctx.roundRect(-17,-15,34,30,8); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.strokeRect(-9,-7,18,14); }
         else { ctx.beginPath(); ctx.arc(0,0,15,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.58)'; ctx.beginPath(); ctx.arc(-5,-5,3,0,Math.PI*2); ctx.arc(6,-5,3,0,Math.PI*2); ctx.fill(); }
@@ -437,7 +453,7 @@
     }
     function drawShots(){
       for(const s of shots){
-        ctx.save(); ctx.strokeStyle=s.color; ctx.fillStyle=s.color; ctx.shadowColor=s.color; ctx.shadowBlur=12;
+        ctx.save(); ctx.strokeStyle=s.color; ctx.fillStyle=s.color; ctx.shadowColor=s.color; ctx.shadowBlur=IS_MOBILE ? 0 : 6;
         if(s.kind==='slash'){
           ctx.globalAlpha=Math.max(0,s.life/s.max); ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.quadraticCurveTo((s.x+s.tx)/2,s.y-32,s.tx,s.ty); ctx.stroke();
         } else {
@@ -449,7 +465,7 @@
     }
     function drawEffects(){
       for(const p of particles){
-        ctx.save(); ctx.globalAlpha=Math.max(0,p.life/.8); ctx.strokeStyle=p.color; ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=10;
+        ctx.save(); ctx.globalAlpha=Math.max(0,p.life/.8); ctx.strokeStyle=p.color; ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=IS_MOBILE ? 0 : 5;
         if(p.ring){ ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(1-p.life/.42+.18),0,Math.PI*2); ctx.stroke(); }
         else { ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }
         ctx.restore();
@@ -459,11 +475,13 @@
       ctx.globalAlpha=1; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     }
     function draw(){
-      drawBg(); drawPath(); drawSlots();
+      drawBg(); drawSlots();
       placed.forEach(drawTower); drawShots(); drawEnemies(); drawEffects();
     }
     function loop(now){
-      const dt = Math.min(.033,(now-last)/1000); last=now;
+      if(now - lastDraw < FRAME_MS){ requestAnimationFrame(loop); return; }
+      lastDraw = now;
+      const dt = Math.min(.05,(now-last)/1000); last=now;
       if(!finished){ updateSpawns(dt); updateTowers(dt); updateShots(dt); updateEnemies(dt); }
       updateEffects(dt); draw(); requestAnimationFrame(loop);
     }
