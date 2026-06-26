@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#070914" />
+  <title>如翼守卫战 · 第 1 关</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#070914;--panel:rgba(12,15,31,.78);--line:rgba(255,255,255,.14);
+      --text:#f8f4ff;--muted:#aab1c4;--pink:#e06cfa;--violet:#7c6ef7;--cyan:#06b6d4;--gold:#facc15;--danger:#fb7185;
+    }
+    body{
+      min-height:100vh;overflow:hidden;background:
+        radial-gradient(circle at 20% 12%,rgba(224,108,250,.2),transparent 30%),
+        radial-gradient(circle at 82% 22%,rgba(6,182,212,.17),transparent 28%),
+        linear-gradient(180deg,#070914,#101226 62%,#080b14);
+      color:var(--text);font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+      -webkit-tap-highlight-color:transparent;user-select:none;
+    }
+    button,a{font:inherit}
+    a{color:inherit;text-decoration:none}
+    .shell{width:min(1180px,100vw);height:100vh;margin:0 auto;display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:12px}
+    .hud,.tower-bar,.toast,.modal-card{
+      border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.045));
+      box-shadow:0 18px 60px rgba(0,0,0,.28);backdrop-filter:blur(14px);
+    }
+    .hud{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:22px}
+    .brand{display:flex;align-items:center;gap:9px;min-width:0}
+    .mark{width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,var(--pink),var(--violet));display:grid;place-items:center;font-weight:900;box-shadow:0 0 28px rgba(224,108,250,.36)}
+    .title{line-height:1.1}
+    .title strong{display:block;font-size:15px;letter-spacing:.04em}
+    .title span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+    .stats{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .stat{border:1px solid rgba(255,255,255,.11);background:rgba(0,0,0,.18);border-radius:999px;padding:8px 11px;color:#eef2ff;font-size:13px;white-space:nowrap}
+    .stat b{color:var(--gold)}
+    .stat.life b{color:#86efac}.stat.wave b{color:#93c5fd}
+    .top-btn{border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);color:#dce4ff;border-radius:999px;padding:8px 11px;cursor:pointer}
+    .stage{position:relative;min-height:0;border:1px solid rgba(255,255,255,.1);border-radius:28px;overflow:hidden;background:#080c18;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03),0 24px 80px rgba(0,0,0,.32)}
+    canvas{display:block;width:100%;height:100%;touch-action:manipulation}
+    .hint{
+      position:absolute;left:14px;bottom:14px;max-width:min(460px,calc(100% - 28px));
+      padding:10px 12px;border-radius:16px;background:rgba(6,9,20,.68);border:1px solid rgba(255,255,255,.1);
+      color:#d8e0f4;font-size:13px;line-height:1.55;pointer-events:none;
+    }
+    .tower-bar{display:grid;grid-template-columns:1.2fr repeat(4,1fr) auto;gap:8px;padding:10px;border-radius:24px;align-items:stretch}
+    .wave-card{padding:11px 12px;border-radius:18px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.09)}
+    .wave-card strong{font-size:14px}.wave-card p{color:var(--muted);font-size:12px;line-height:1.45;margin-top:4px}
+    .tower-btn,.primary{
+      border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);border-radius:18px;color:#f7f3ff;cursor:pointer;
+      padding:10px 9px;text-align:left;transition:.16s;position:relative;overflow:hidden;
+    }
+    .tower-btn:before{content:"";position:absolute;inset:auto 10px 8px 10px;height:2px;background:var(--tower);box-shadow:0 0 16px var(--tower)}
+    .tower-btn.active{border-color:var(--tower);background:color-mix(in srgb,var(--tower) 18%,rgba(255,255,255,.06));transform:translateY(-1px)}
+    .tower-btn small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+    .primary{display:flex;align-items:center;justify-content:center;text-align:center;background:linear-gradient(135deg,var(--pink),var(--violet));border:0;font-weight:900;min-width:130px;box-shadow:0 12px 34px rgba(124,110,247,.3)}
+    .primary:disabled{filter:grayscale(.7);opacity:.55;cursor:not-allowed}
+    .toast{
+      position:absolute;left:50%;top:78px;transform:translateX(-50%);border-radius:999px;padding:10px 16px;color:#f9fbff;font-size:14px;
+      opacity:0;pointer-events:none;transition:.25s;z-index:5;white-space:nowrap;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(4px)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+    .modal.show{display:flex}
+    .modal-card{width:min(470px,100%);border-radius:30px;padding:28px;text-align:center}
+    .modal-card h1{font-size:34px;letter-spacing:-.04em;margin-bottom:10px}
+    .modal-card p{color:var(--muted);line-height:1.75;margin-bottom:18px}
+    .modal-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .modal-actions .primary,.modal-actions .top-btn{min-width:130px;justify-content:center;text-align:center}
+    @media(max-width:820px){
+      body{overflow:auto}.shell{height:100svh;padding:8px;gap:8px}
+      .hud{align-items:flex-start}.title span{display:none}.stats{gap:6px}.stat{font-size:12px;padding:7px 9px}.top-btn{font-size:12px;padding:7px 9px}
+      .tower-bar{grid-template-columns:repeat(2,1fr);border-radius:20px}.wave-card{grid-column:1/-1}.primary{grid-column:1/-1;width:100%}
+      .tower-btn{padding:9px 10px}.hint{font-size:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hud">
+      <div class="brand">
+        <div class="mark">翼</div>
+        <div class="title"><strong>如翼守卫战</strong><span>第 1 关 · 草地入口 · 四塔开放 / 暂不升级</span></div>
+      </div>
+      <div class="stats">
+        <span class="stat">🪙 金币 <b id="gold">220</b></span>
+        <span class="stat life">💎 核心 <b id="life">10</b></span>
+        <span class="stat wave">🌊 波次 <b id="wave">0/3</b></span>
+        <a class="top-btn" href="./arcade.html">大厅</a>
+        <button class="top-btn" id="restartTop" type="button">重开</button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <canvas id="game" aria-label="如翼守卫战游戏画面"></canvas>
+      <div class="toast" id="toast">请选择一个塔，再点击塔位建造。</div>
+      <p class="hint" id="hint">选择底部防御塔，然后点击发光塔位建造。第 1 关所有塔只能 Lv.1，挡住 3 波敌人即可胜利。</p>
+    </main>
+
+    <footer class="tower-bar" aria-label="防御塔选择">
+      <div class="wave-card">
+        <strong id="statusTitle">准备防守</strong>
+        <p id="statusText">建议先用光箭塔清小怪，再用翼兵营拖住敌人，灵感炮塔适合怪物聚集时。</p>
+      </div>
+      <button class="tower-btn active" type="button" data-tower="arrow" style="--tower:#a78bfa">光箭塔 <small>50 金币 · 快速单体</small></button>
+      <button class="tower-btn" type="button" data-tower="magic" style="--tower:#22d3ee">星咒塔 <small>80 金币 · 高伤单体</small></button>
+      <button class="tower-btn" type="button" data-tower="barracks" style="--tower:#f0f9ff">翼兵营 <small>75 金币 · 小兵拖延</small></button>
+      <button class="tower-btn" type="button" data-tower="cannon" style="--tower:#fb923c">灵感炮塔 <small>100 金币 · 范围伤害</small></button>
+      <button class="primary" id="startWave" type="button">开始第 1 波</button>
+    </footer>
+  </div>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <h1 id="modalTitle">胜利</h1>
+      <p id="modalText">第一道入口守住了，灵感核心开始重新发光。</p>
+      <div class="modal-actions">
+        <button class="primary" id="again" type="button">再来一次</button>
+        <a class="top-btn" href="./arcade.html">返回大厅</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const goldEl = document.getElementById('gold');
+    const lifeEl = document.getElementById('life');
+    const waveEl = document.getElementById('wave');
+    const startBtn = document.getElementById('startWave');
+    const toastEl = document.getElementById('toast');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusText = document.getElementById('statusText');
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalText = document.getElementById('modalText');
+
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const towers = {
+      arrow: {name:'光箭塔', cost:50, range:128, cooldown:.46, damage:8, color:'#a78bfa', kind:'single'},
+      magic: {name:'星咒塔', cost:80, range:138, cooldown:1.08, damage:22, color:'#22d3ee', kind:'single'},
+      barracks: {name:'翼兵营', cost:75, range:104, cooldown:.72, damage:5, color:'#f0f9ff', kind:'slow'},
+      cannon: {name:'灵感炮塔', cost:100, range:122, cooldown:1.18, damage:14, color:'#fb923c', kind:'splash'}
+    };
+    const waves = [
+      [{type:'slime', count:5, gap:.78}],
+      [{type:'slime', count:6, gap:.65}, {type:'runner', count:3, gap:.58}],
+      [{type:'slime', count:8, gap:.58}, {type:'tank', count:1, gap:1.05}]
+    ];
+    const enemyDefs = {
+      slime:{name:'小史莱姆', hp:30, speed:54, reward:10, leak:1, color:'#34d399'},
+      runner:{name:'疾跑虫', hp:20, speed:86, reward:12, leak:1, color:'#fb923c'},
+      tank:{name:'石甲怪', hp:90, speed:36, reward:24, leak:2, color:'#9ca3af'}
+    };
+
+    let W=0,H=0,path=[],slots=[];
+    let selected='arrow', gold=220, life=10, waveIndex=0, running=false, finished=false;
+    let enemies=[], placed=[], shots=[], particles=[], floats=[];
+    let spawnQueue=[], spawnTimer=0, last=performance.now(), toastTimer=0;
+
+    function resize(){
+      const rect = canvas.parentElement.getBoundingClientRect();
+      W = Math.max(320, Math.floor(rect.width));
+      H = Math.max(260, Math.floor(rect.height));
+      canvas.width = Math.floor(W * DPR);
+      canvas.height = Math.floor(H * DPR);
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+      buildMap();
+    }
+    function buildMap(){
+      const y = H * .52;
+      path = [
+        {x:W*.06,y},{x:W*.24,y},{x:W*.38,y:H*.38},{x:W*.58,y:H*.38},
+        {x:W*.72,y:H*.58},{x:W*.94,y:H*.58}
+      ];
+      slots = [
+        {x:W*.24,y:H*.32,r:26,tower:null},
+        {x:W*.47,y:H*.58,r:26,tower:null},
+        {x:W*.68,y:H*.31,r:26,tower:null},
+        {x:W*.79,y:H*.73,r:26,tower:null}
+      ];
+      placed.forEach(t=>{
+        const s = slots[t.slotIndex];
+        if(!s) return;
+        t.x = s.x; t.y = s.y; s.tower = t;
+      });
+    }
+    function reset(){
+      selected='arrow'; gold=220; life=10; waveIndex=0; running=false; finished=false;
+      enemies=[]; placed=[]; shots=[]; particles=[]; floats=[]; spawnQueue=[]; spawnTimer=0;
+      slots.forEach(s=>s.tower=null); modal.classList.remove('show');
+      document.querySelectorAll('.tower-btn').forEach(b=>b.classList.toggle('active', b.dataset.tower === selected));
+      setStatus('准备防守','选择一个塔，然后点击地图上的发光塔位。第 1 关不能升级，但四种塔都能建造。');
+      updateHud(); updateStartButton(); addBurst(W*.5,H*.5,'#7c6ef7',20,.9);
+    }
+    function updateHud(){
+      goldEl.textContent = gold;
+      lifeEl.textContent = Math.max(0, life);
+      waveEl.textContent = `${Math.min(waveIndex,3)}/3`;
+    }
+    function setStatus(title,text){ statusTitle.textContent=title; statusText.textContent=text; }
+    function showToast(text){
+      toastEl.textContent=text; toastEl.classList.add('show'); toastTimer=1.8;
+    }
+    function updateStartButton(){
+      const hasActive = running || spawnQueue.length || enemies.length;
+      startBtn.disabled = finished || hasActive || waveIndex >= waves.length;
+      startBtn.textContent = waveIndex >= waves.length ? '防守完成' : `开始第 ${waveIndex + 1} 波`;
+    }
+    function distance(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+    function lerp(a,b,t){ return a+(b-a)*t; }
+    function pathLength(){
+      let len=0; for(let i=0;i<path.length-1;i++) len += distance(path[i],path[i+1]); return len;
+    }
+    function pointOnPath(dist){
+      let left = dist;
+      for(let i=0;i<path.length-1;i++){
+        const a=path[i], b=path[i+1], seg=distance(a,b);
+        if(left <= seg){ const t=left/seg; return {x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t), angle:Math.atan2(b.y-a.y,b.x-a.x)}; }
+        left -= seg;
+      }
+      return {...path[path.length-1], angle:0};
+    }
+    function startWave(){
+      if(finished || running || spawnQueue.length || enemies.length) return;
+      if(waveIndex >= waves.length) return;
+      spawnQueue = [];
+      waves[waveIndex].forEach(group=>{
+        for(let i=0;i<group.count;i++) spawnQueue.push({type:group.type, delay:i*group.gap});
+      });
+      spawnQueue.sort((a,b)=>a.delay-b.delay);
+      spawnTimer = 0; running = true;
+      setStatus(`第 ${waveIndex + 1} 波来袭`, waveIndex === 0 ? '小史莱姆正在接近核心。' : waveIndex === 1 ? '疾跑虫速度很快，注意前置输出。' : '石甲怪血量很厚，星咒塔会更有效。');
+      updateStartButton();
+    }
+    function spawnEnemy(type){
+      const def = enemyDefs[type];
+      const p = pointOnPath(0);
+      enemies.push({type, x:p.x, y:p.y, dist:0, hp:def.hp, maxHp:def.hp, speed:def.speed, slow:0, hit:0, alive:true});
+    }
+    function placeTower(x,y){
+      if(finished) return;
+      let hitIndex = slots.findIndex(s=>!s.tower && Math.hypot(x-s.x,y-s.y) < 38);
+      let hit = slots[hitIndex];
+      if(!hit){ showToast('请点击发光塔位建造。'); return; }
+      const cfg = towers[selected];
+      if(gold < cfg.cost){ showToast(`金币不足，${cfg.name}需要 ${cfg.cost} 金币。`); return; }
+      gold -= cfg.cost;
+      const tower = {type:selected, slotIndex:hitIndex, x:hit.x, y:hit.y, level:1, cd:Math.random()*.2, pulse:0, soldiers: selected==='barracks' ? 2 : 0};
+      hit.tower = tower; placed.push(tower);
+      addSummon(hit.x,hit.y,cfg.color); addFloat(hit.x,hit.y-34,`-${cfg.cost}`,'#facc15');
+      setStatus(`${cfg.name}已建造`,'第 1 关暂不开放升级。先观察敌人路线，必要时补充不同类型的塔。');
+      updateHud();
+    }
+    function findTarget(t, range){
+      let best=null, bestDist=-1;
+      for(const e of enemies){
+        if(!e.alive) continue;
+        const d = Math.hypot(e.x-t.x,e.y-t.y);
+        if(d <= range && e.dist > bestDist){ best=e; bestDist=e.dist; }
+      }
+      return best;
+    }
+    function damageEnemy(e, dmg, color, splash=false){
+      if(!e || !e.alive) return;
+      e.hp -= dmg; e.hit = .08;
+      addFloat(e.x,e.y-24,Math.round(dmg),color);
+      addBurst(e.x,e.y,color,splash?14:7,splash?.5:.35);
+      if(e.hp <= 0){
+        e.alive=false;
+        const def = enemyDefs[e.type]; gold += def.reward;
+        addFloat(e.x,e.y-16,`+${def.reward}`,'#facc15');
+        addDeath(e);
+        updateHud();
+      }
+    }
+    function updateTowers(dt){
+      for(const t of placed){
+        const cfg = towers[t.type]; t.cd -= dt; t.pulse += dt;
+        if(t.cd > 0) continue;
+        const target = findTarget(t,cfg.range);
+        if(!target) continue;
+        t.cd = cfg.cooldown;
+        if(cfg.kind === 'slow'){
+          target.slow = Math.max(target.slow, .9);
+          shots.push({kind:'slash', x:t.x, y:t.y, tx:target.x, ty:target.y, life:.24, max:.24, color:cfg.color, target});
+          damageEnemy(target,cfg.damage,cfg.color);
+        } else {
+          shots.push({kind:cfg.kind, x:t.x, y:t.y, sx:t.x, sy:t.y, tx:target.x, ty:target.y, life:0, dur:t.type==='magic'?.38:t.type==='cannon'?.44:.26, color:cfg.color, target, damage:cfg.damage, splash:cfg.kind==='splash'});
+        }
+      }
+    }
+    function updateShots(dt){
+      for(const s of shots){
+        if(s.kind === 'slash'){ s.life -= dt; continue; }
+        s.life += dt; const p = Math.min(1, s.life / s.dur);
+        s.x = lerp(s.sx,s.tx,p); s.y = lerp(s.sy,s.ty,p);
+        if(p >= 1 && !s.done){
+          s.done = true;
+          if(s.splash){
+            for(const e of enemies){ if(e.alive && Math.hypot(e.x-s.tx,e.y-s.ty)<54) damageEnemy(e,s.damage,s.color,true); }
+          } else damageEnemy(s.target,s.damage,s.color);
+        }
+      }
+      shots = shots.filter(s => s.kind==='slash' ? s.life>0 : !s.done || s.life < s.dur + .05);
+    }
+    function updateEnemies(dt){
+      const totalLen = pathLength();
+      for(const e of enemies){
+        if(!e.alive) continue;
+        const slowFactor = e.slow > 0 ? .55 : 1;
+        e.slow = Math.max(0, e.slow - dt); e.hit = Math.max(0, e.hit - dt);
+        e.dist += e.speed * slowFactor * dt;
+        if(e.dist >= totalLen){
+          e.alive=false; life -= enemyDefs[e.type].leak; addBurst(path[path.length-1].x,path[path.length-1].y,'#fb7185',20,.65);
+          updateHud();
+          if(life <= 0) finish(false);
+        } else {
+          const p = pointOnPath(e.dist); e.x=p.x; e.y=p.y; e.angle=p.angle;
+        }
+      }
+      enemies = enemies.filter(e=>e.alive);
+    }
+    function updateSpawns(dt){
+      if(!running) return;
+      spawnTimer += dt;
+      while(spawnQueue.length && spawnQueue[0].delay <= spawnTimer){ spawnEnemy(spawnQueue.shift().type); }
+      if(!spawnQueue.length && !enemies.length){
+        running=false; waveIndex++; updateHud();
+        if(waveIndex >= waves.length) finish(true);
+        else { setStatus(`第 ${waveIndex} 波守住了`,`灵感核心还剩 ${life} 点。可以继续补塔，然后开始下一波。`); addBurst(W*.5,H*.18,'#86efac',24,.7); }
+        updateStartButton();
+      }
+    }
+    function updateEffects(dt){
+      particles.forEach(p=>{ p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=p.g*dt; p.r*=.985; });
+      floats.forEach(f=>{ f.life-=dt; f.y-=24*dt; f.alpha=Math.max(0,f.life/f.max); });
+      particles = particles.filter(p=>p.life>0 && p.r>.4).slice(-130);
+      floats = floats.filter(f=>f.life>0).slice(-28);
+      if(toastTimer>0){ toastTimer-=dt; if(toastTimer<=0) toastEl.classList.remove('show'); }
+    }
+    function finish(win){
+      if(finished) return; finished=true; running=false; spawnQueue=[]; updateStartButton();
+      if(win){
+        modalTitle.textContent='防守成功';
+        modalText.textContent=`第一道入口守住了，灵感核心开始重新发光。剩余核心生命：${life}/10。`;
+        addBurst(W*.5,H*.5,'#facc15',48,1.2);
+      } else {
+        modalTitle.textContent='核心失守';
+        modalText.textContent='混沌突破了入口。调整塔位组合，再试一次吧。';
+      }
+      setTimeout(()=>modal.classList.add('show'),420);
+    }
+    function addFloat(x,y,text,color){ floats.push({x,y,text,color,life:.8,max:.8,alpha:1}); }
+    function addBurst(x,y,color,count=12,power=.6){
+      for(let i=0;i<count;i++){
+        const a=Math.random()*Math.PI*2, sp=(30+Math.random()*90)*power;
+        particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:2+Math.random()*3,life:.35+Math.random()*.45,g:10,color});
+      }
+    }
+    function addSummon(x,y,color){
+      addBurst(x,y,color,22,.55);
+      particles.push({x,y,r:38,vx:0,vy:0,life:.42,g:0,color,ring:true});
+    }
+    function addDeath(e){
+      const color = e.type==='runner' ? '#fb923c' : e.type==='tank' ? '#c4b5fd' : '#34d399';
+      addBurst(e.x,e.y,color,e.type==='tank'?20:14,e.type==='runner'?.75:.55);
+    }
+    function drawBg(){
+      const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0b1020'); g.addColorStop(1,'#070914'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='rgba(255,255,255,.035)'; ctx.lineWidth=1;
+      for(let x=0;x<W;x+=42){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+      for(let y=0;y<H;y+=42){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+      const rg=ctx.createRadialGradient(W*.22,H*.24,0,W*.22,H*.24,W*.4); rg.addColorStop(0,'rgba(224,108,250,.13)'); rg.addColorStop(1,'transparent'); ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+    }
+    function drawPath(){
+      ctx.lineCap='round'; ctx.lineJoin='round';
+      ctx.strokeStyle='rgba(255,255,255,.09)'; ctx.lineWidth=48; drawPolyline();
+      ctx.strokeStyle='rgba(124,110,247,.24)'; ctx.lineWidth=34; drawPolyline();
+      ctx.strokeStyle='rgba(6,182,212,.18)'; ctx.lineWidth=6; ctx.setLineDash([14,18]); drawPolyline(); ctx.setLineDash([]);
+      ctx.fillStyle='rgba(52,211,153,.16)'; ctx.beginPath(); ctx.arc(path[0].x,path[0].y,18,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(250,204,21,.23)'; ctx.beginPath(); ctx.arc(path[path.length-1].x,path[path.length-1].y,24,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#d9f99d'; ctx.font='700 12px sans-serif'; ctx.fillText('入口',path[0].x-14,path[0].y-30);
+      ctx.fillStyle='#fde68a'; ctx.fillText('核心',path[path.length-1].x-14,path[path.length-1].y-34);
+    }
+    function drawPolyline(){ ctx.beginPath(); ctx.moveTo(path[0].x,path[0].y); for(let i=1;i<path.length;i++) ctx.lineTo(path[i].x,path[i].y); ctx.stroke(); }
+    function drawSlots(){
+      slots.forEach((s,i)=>{
+        if(s.tower) return;
+        const pulse = .5 + Math.sin(performance.now()/450 + i)*.18;
+        ctx.strokeStyle=`rgba(224,108,250,${pulse})`; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(s.x,s.y,25,0,Math.PI*2); ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.06)'; ctx.beginPath(); ctx.arc(s.x,s.y,18,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.52)'; ctx.font='700 18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+',s.x,s.y);
+      });
+      ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    }
+    function drawTower(t){
+      const cfg=towers[t.type];
+      ctx.save(); ctx.translate(t.x,t.y);
+      ctx.shadowColor=cfg.color; ctx.shadowBlur=14;
+      if(t.type==='barracks'){
+        ctx.fillStyle='rgba(255,255,255,.1)'; ctx.beginPath(); ctx.roundRect(-22,-16,44,36,10); ctx.fill();
+        ctx.fillStyle=cfg.color; ctx.beginPath(); ctx.roundRect(-16,-24,32,38,12); ctx.fill();
+        ctx.shadowBlur=0; ctx.strokeStyle='rgba(124,110,247,.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,-1,22,Math.PI*.08,Math.PI*.92); ctx.stroke();
+        for(let i=0;i<2;i++){
+          const ox = i ? 15 : -15, bob=Math.sin(performance.now()/260+i)*2;
+          ctx.fillStyle='#eef6ff'; ctx.beginPath(); ctx.arc(ox,24+bob,7,0,Math.PI*2); ctx.fill();
+          ctx.strokeStyle='rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(ox-7,22+bob,8,Math.PI*.9,Math.PI*1.55); ctx.stroke();
+          ctx.beginPath(); ctx.arc(ox+7,22+bob,8,Math.PI*1.45,Math.PI*.1); ctx.stroke();
+        }
+      } else if(t.type==='cannon'){
+        ctx.fillStyle='#251326'; ctx.beginPath(); ctx.roundRect(-19,-13,38,34,10); ctx.fill();
+        ctx.fillStyle=cfg.color; ctx.beginPath(); ctx.roundRect(-12,-28,24,28,8); ctx.fill();
+        ctx.fillStyle='#ffd7a8'; ctx.beginPath(); ctx.arc(0,-30,9,0,Math.PI*2); ctx.fill();
+      } else {
+        ctx.fillStyle=cfg.color; ctx.beginPath(); ctx.roundRect(-15,-28,30,44,12); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(0,-30,t.type==='magic'?10:7,0,Math.PI*2); ctx.fill();
+      }
+      ctx.shadowBlur=0; ctx.restore();
+    }
+    function drawEnemies(){
+      for(const e of enemies){
+        const def=enemyDefs[e.type]; ctx.save(); ctx.translate(e.x,e.y);
+        if(e.hit>0){ ctx.globalAlpha=.92; ctx.fillStyle='#fff'; } else ctx.fillStyle=def.color;
+        ctx.shadowColor=def.color; ctx.shadowBlur=12;
+        if(e.type==='runner'){ ctx.rotate(e.angle); ctx.beginPath(); ctx.ellipse(0,0,16,10,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.5)'; ctx.fillRect(-20,-2,8,4); }
+        else if(e.type==='tank'){ ctx.beginPath(); ctx.roundRect(-17,-15,34,30,8); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.strokeRect(-9,-7,18,14); }
+        else { ctx.beginPath(); ctx.arc(0,0,15,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.58)'; ctx.beginPath(); ctx.arc(-5,-5,3,0,Math.PI*2); ctx.arc(6,-5,3,0,Math.PI*2); ctx.fill(); }
+        ctx.shadowBlur=0;
+        const w=36, hpw=w*Math.max(0,e.hp/e.maxHp);
+        ctx.fillStyle='rgba(0,0,0,.42)'; ctx.fillRect(-w/2,-27,w,5);
+        ctx.fillStyle=e.slow>0?'#bae6fd':'#86efac'; ctx.fillRect(-w/2,-27,hpw,5);
+        ctx.restore();
+      }
+    }
+    function drawShots(){
+      for(const s of shots){
+        ctx.save(); ctx.strokeStyle=s.color; ctx.fillStyle=s.color; ctx.shadowColor=s.color; ctx.shadowBlur=12;
+        if(s.kind==='slash'){
+          ctx.globalAlpha=Math.max(0,s.life/s.max); ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.quadraticCurveTo((s.x+s.tx)/2,s.y-32,s.tx,s.ty); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.arc(s.x,s.y,s.kind==='splash'?8:s.kind==='single'?5:7,0,Math.PI*2); ctx.fill();
+          if(s.splash && s.done){ ctx.globalAlpha=.35; ctx.beginPath(); ctx.arc(s.tx,s.ty,54,0,Math.PI*2); ctx.stroke(); }
+        }
+        ctx.restore();
+      }
+    }
+    function drawEffects(){
+      for(const p of particles){
+        ctx.save(); ctx.globalAlpha=Math.max(0,p.life/.8); ctx.strokeStyle=p.color; ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=10;
+        if(p.ring){ ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(1-p.life/.42+.18),0,Math.PI*2); ctx.stroke(); }
+        else { ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }
+        ctx.restore();
+      }
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='800 15px Inter, sans-serif';
+      for(const f of floats){ ctx.globalAlpha=f.alpha; ctx.fillStyle=f.color; ctx.fillText(f.text,f.x,f.y); }
+      ctx.globalAlpha=1; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    }
+    function draw(){
+      drawBg(); drawPath(); drawSlots();
+      placed.forEach(drawTower); drawShots(); drawEnemies(); drawEffects();
+    }
+    function loop(now){
+      const dt = Math.min(.033,(now-last)/1000); last=now;
+      if(!finished){ updateSpawns(dt); updateTowers(dt); updateShots(dt); updateEnemies(dt); }
+      updateEffects(dt); draw(); requestAnimationFrame(loop);
+    }
+    function pointerPos(ev){
+      const rect=canvas.getBoundingClientRect();
+      const p=ev.touches?ev.touches[0]:ev;
+      return {x:(p.clientX-rect.left), y:(p.clientY-rect.top)};
+    }
+    canvas.addEventListener('pointerdown', ev=>{ const p=pointerPos(ev); placeTower(p.x,p.y); });
+    document.querySelectorAll('.tower-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        selected=btn.dataset.tower;
+        document.querySelectorAll('.tower-btn').forEach(b=>b.classList.toggle('active',b===btn));
+        const cfg=towers[selected]; showToast(`已选择：${cfg.name}`);
+      });
+    });
+    startBtn.addEventListener('click',startWave);
+    document.getElementById('again').addEventListener('click',reset);
+    document.getElementById('restartTop').addEventListener('click',reset);
+    window.addEventListener('resize',resize);
+    resize(); reset(); requestAnimationFrame(t=>{last=t; requestAnimationFrame(loop);});
+  </script>
+</body>
+</html>
