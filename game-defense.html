@@ -95,7 +95,7 @@
     <main class="stage">
       <canvas id="game" aria-label="如翼守卫战游戏画面"></canvas>
       <div class="toast" id="toast">请选择一个塔，再点击塔位建造。</div>
-      <p class="hint" id="hint">选择底部防御塔，然后点击发光塔位建造。第 1 关所有塔只能 Lv.1，挡住 3 波敌人即可胜利。</p>
+      <p class="hint" id="hint">素材加载完成后，选择底部防御塔并点击发光塔位建造。第 1 关所有塔只能 Lv.1，挡住 3 波敌人即可胜利。</p>
     </main>
 
     <footer class="tower-bar" aria-label="防御塔选择">
@@ -155,11 +155,41 @@
       runner:{name:'疾跑虫', hp:20, speed:86, reward:12, leak:1, color:'#fb923c'},
       tank:{name:'石甲怪', hp:90, speed:36, reward:24, leak:2, color:'#9ca3af'}
     };
+    const assetSources = {
+      map: './game-assets/defense/maps/map-level-1.webp',
+      arrow: './game-assets/defense/sprites/tower-arrow.webp',
+      magic: './game-assets/defense/sprites/tower-magic.webp',
+      barracks: './game-assets/defense/sprites/tower-barracks.webp',
+      cannon: './game-assets/defense/sprites/tower-cannon.webp',
+      slime: './game-assets/defense/sprites/enemy-slime.webp',
+      runner: './game-assets/defense/sprites/enemy-runner.webp',
+      tank: './game-assets/defense/sprites/enemy-tank.webp',
+      soldier: './game-assets/defense/sprites/soldier-wing.webp'
+    };
+    const assets = {};
+    let assetsReady = false;
 
     let W=0,H=0,path=[],slots=[],totalPathLen=0,staticLayer=null,staticCtx=null;
     let selected='arrow', gold=220, life=10, waveIndex=0, running=false, finished=false;
     let enemies=[], placed=[], shots=[], particles=[], floats=[];
     let spawnQueue=[], spawnTimer=0, last=performance.now(), lastDraw=0, toastTimer=0;
+
+    function loadAssets(){
+      setStatus('素材加载中','正在加载地图、塔和角色素材。加载完再开始，可以避免边玩边卡。');
+      startBtn.disabled = true;
+      const entries = Object.entries(assetSources);
+      return Promise.all(entries.map(([key, src]) => new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => { assets[key] = img; resolve(); };
+        img.onerror = () => { console.warn('素材加载失败', src); resolve(); };
+        img.src = src;
+      }))).then(()=>{
+        assetsReady = true;
+        buildStaticLayer();
+        setStatus('准备防守','选择一个塔，然后点击地图上的发光塔位。素材已加载，移动、攻击和受伤反馈会保持轻量播放。');
+        updateStartButton();
+      });
+    }
 
     function resize(){
       const rect = canvas.parentElement.getBoundingClientRect();
@@ -172,18 +202,18 @@
       buildStaticLayer();
     }
     function buildMap(){
-      const y = H * .52;
+      const y = H * .42;
       path = [
-        {x:W*.06,y},{x:W*.24,y},{x:W*.38,y:H*.38},{x:W*.58,y:H*.38},
-        {x:W*.72,y:H*.58},{x:W*.94,y:H*.58}
+        {x:W*.02,y:H*.38},{x:W*.17,y:H*.39},{x:W*.31,y:H*.41},{x:W*.39,y:H*.30},
+        {x:W*.48,y:H*.39},{x:W*.61,y:H*.37},{x:W*.72,y:H*.50},{x:W*.83,y:H*.51},{x:W*.94,y:H*.43}
       ];
       totalPathLen = 0;
       for(let i=0;i<path.length-1;i++) totalPathLen += distance(path[i],path[i+1]);
       slots = [
-        {x:W*.24,y:H*.32,r:26,tower:null},
-        {x:W*.47,y:H*.58,r:26,tower:null},
-        {x:W*.68,y:H*.31,r:26,tower:null},
-        {x:W*.79,y:H*.73,r:26,tower:null}
+        {x:W*.34,y:H*.24,r:26,tower:null},
+        {x:W*.62,y:H*.24,r:26,tower:null},
+        {x:W*.45,y:H*.53,r:26,tower:null},
+        {x:W*.66,y:H*.64,r:26,tower:null}
       ];
       placed.forEach(t=>{
         const s = slots[t.slotIndex];
@@ -210,8 +240,8 @@
     }
     function updateStartButton(){
       const hasActive = running || spawnQueue.length || enemies.length;
-      startBtn.disabled = finished || hasActive || waveIndex >= waves.length;
-      startBtn.textContent = waveIndex >= waves.length ? '防守完成' : `开始第 ${waveIndex + 1} 波`;
+      startBtn.disabled = !assetsReady || finished || hasActive || waveIndex >= waves.length;
+      startBtn.textContent = !assetsReady ? '素材加载中' : waveIndex >= waves.length ? '防守完成' : `开始第 ${waveIndex + 1} 波`;
     }
     function distance(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
     function lerp(a,b,t){ return a+(b-a)*t; }
@@ -228,6 +258,7 @@
       return {...path[path.length-1], angle:0};
     }
     function startWave(){
+      if(!assetsReady){ showToast('素材还在加载，请稍等一下。'); return; }
       if(finished || running || spawnQueue.length || enemies.length) return;
       if(waveIndex >= waves.length) return;
       spawnQueue = [];
@@ -379,12 +410,18 @@
       staticCtx = staticLayer.getContext('2d');
       staticCtx.setTransform(DPR,0,0,DPR,0,0);
       const c = staticCtx;
-      const g=c.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0b1020'); g.addColorStop(1,'#070914'); c.fillStyle=g; c.fillRect(0,0,W,H);
-      c.strokeStyle='rgba(255,255,255,.026)'; c.lineWidth=1;
-      for(let x=0;x<W;x+=56){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke();}
-      for(let y=0;y<H;y+=56){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();}
-      const rg=c.createRadialGradient(W*.22,H*.24,0,W*.22,H*.24,W*.36); rg.addColorStop(0,'rgba(224,108,250,.10)'); rg.addColorStop(1,'transparent'); c.fillStyle=rg; c.fillRect(0,0,W,H);
-      drawPath(c);
+      if(assets.map){
+        c.drawImage(assets.map, 0, 0, W, H);
+        c.fillStyle='rgba(5,8,18,.08)';
+        c.fillRect(0,0,W,H);
+      } else {
+        const g=c.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0b1020'); g.addColorStop(1,'#070914'); c.fillStyle=g; c.fillRect(0,0,W,H);
+        c.strokeStyle='rgba(255,255,255,.026)'; c.lineWidth=1;
+        for(let x=0;x<W;x+=56){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke();}
+        for(let y=0;y<H;y+=56){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();}
+        const rg=c.createRadialGradient(W*.22,H*.24,0,W*.22,H*.24,W*.36); rg.addColorStop(0,'rgba(224,108,250,.10)'); rg.addColorStop(1,'transparent'); c.fillStyle=rg; c.fillRect(0,0,W,H);
+        drawPath(c);
+      }
     }
     function drawBg(){
       if(staticLayer) ctx.drawImage(staticLayer,0,0,W,H);
@@ -404,17 +441,29 @@
     function drawSlots(){
       slots.forEach((s,i)=>{
         if(s.tower) return;
-        const pulse = .5 + Math.sin(performance.now()/450 + i)*.18;
-        ctx.strokeStyle=`rgba(224,108,250,${pulse})`; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.arc(s.x,s.y,25,0,Math.PI*2); ctx.stroke();
-        ctx.fillStyle='rgba(255,255,255,.06)'; ctx.beginPath(); ctx.arc(s.x,s.y,18,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(255,255,255,.52)'; ctx.font='700 18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+',s.x,s.y);
+        const pulse = .45 + Math.sin(performance.now()/520 + i)*.16;
+        ctx.strokeStyle=`rgba(255,255,255,${pulse})`; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(s.x,s.y,31,0,Math.PI*2); ctx.stroke();
+        ctx.strokeStyle=`rgba(224,108,250,${pulse})`; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.arc(s.x,s.y,23,0,Math.PI*2); ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.78)'; ctx.font='800 17px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+',s.x,s.y);
       });
       ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     }
     function drawTower(t){
       const cfg=towers[t.type];
       ctx.save(); ctx.translate(t.x,t.y);
+      const img = assets[t.type];
+      const bob = Math.sin(performance.now()/650 + t.slotIndex) * 1.2;
+      if(img){
+        const size = t.type==='barracks' ? 104 : t.type==='cannon' ? 96 : 90;
+        ctx.shadowColor=cfg.color; ctx.shadowBlur=IS_MOBILE ? 0 : 6;
+        ctx.drawImage(img, -size/2, -size*.78 + bob, size, size * (img.height / img.width));
+        ctx.shadowBlur=0;
+        if(t.type==='barracks') drawBarracksSoldiers(t);
+        ctx.restore();
+        return;
+      }
       ctx.shadowColor=cfg.color; ctx.shadowBlur=IS_MOBILE ? 0 : 7;
       if(t.type==='barracks'){
         ctx.fillStyle='rgba(255,255,255,.1)'; ctx.beginPath(); ctx.roundRect(-22,-16,44,36,10); ctx.fill();
@@ -436,15 +485,44 @@
       }
       ctx.shadowBlur=0; ctx.restore();
     }
+    function drawBarracksSoldiers(t){
+      const img = assets.soldier;
+      if(!img) return;
+      for(let i=0;i<2;i++){
+        const ox = i ? 26 : -26;
+        const oy = 38 + Math.sin(performance.now()/420+i)*1.5;
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.scale(i ? -1 : 1, 1);
+        ctx.globalAlpha = .95;
+        ctx.drawImage(img, -18, -28, 36, 36 * (img.height/img.width));
+        ctx.restore();
+      }
+    }
     function drawEnemies(){
       for(const e of enemies){
         const def=enemyDefs[e.type]; ctx.save(); ctx.translate(e.x,e.y);
-        if(e.hit>0){ ctx.globalAlpha=.92; ctx.fillStyle='#fff'; } else ctx.fillStyle=def.color;
-        ctx.shadowColor=def.color; ctx.shadowBlur=IS_MOBILE ? 0 : 6;
-        if(e.type==='runner'){ ctx.rotate(e.angle); ctx.beginPath(); ctx.ellipse(0,0,16,10,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.5)'; ctx.fillRect(-20,-2,8,4); }
-        else if(e.type==='tank'){ ctx.beginPath(); ctx.roundRect(-17,-15,34,30,8); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.strokeRect(-9,-7,18,14); }
-        else { ctx.beginPath(); ctx.arc(0,0,15,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.58)'; ctx.beginPath(); ctx.arc(-5,-5,3,0,Math.PI*2); ctx.arc(6,-5,3,0,Math.PI*2); ctx.fill(); }
-        ctx.shadowBlur=0;
+        const img = assets[e.type];
+        const drawSize = e.type==='tank' ? 66 : e.type==='runner' ? 50 : 48;
+        const bob = Math.sin(performance.now()/210 + e.dist*.03) * (e.type==='tank' ? .8 : 1.8);
+        if(e.hit>0) ctx.globalAlpha=.62;
+        ctx.shadowColor=def.color; ctx.shadowBlur=IS_MOBILE ? 0 : 5;
+        if(img){
+          if(e.type==='runner') ctx.rotate(Math.sin(performance.now()/130)*.05);
+          ctx.drawImage(img, -drawSize/2, -drawSize*.62 + bob, drawSize, drawSize * (img.height/img.width));
+          if(e.hit>0){
+            ctx.globalCompositeOperation='source-atop';
+            ctx.fillStyle='rgba(255,255,255,.65)';
+            ctx.fillRect(-drawSize/2, -drawSize*.62 + bob, drawSize, drawSize * (img.height/img.width));
+            ctx.globalCompositeOperation='source-over';
+          }
+        } else {
+          if(e.hit>0){ ctx.globalAlpha=.92; ctx.fillStyle='#fff'; } else ctx.fillStyle=def.color;
+          if(e.type==='runner'){ ctx.rotate(e.angle); ctx.beginPath(); ctx.ellipse(0,0,16,10,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.5)'; ctx.fillRect(-20,-2,8,4); }
+          else if(e.type==='tank'){ ctx.beginPath(); ctx.roundRect(-17,-15,34,30,8); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.strokeRect(-9,-7,18,14); }
+          else { ctx.beginPath(); ctx.arc(0,0,15,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.58)'; ctx.beginPath(); ctx.arc(-5,-5,3,0,Math.PI*2); ctx.arc(6,-5,3,0,Math.PI*2); ctx.fill(); }
+        }
+        ctx.shadowBlur=0; ctx.globalAlpha=1;
         const w=36, hpw=w*Math.max(0,e.hp/e.maxHp);
         ctx.fillStyle='rgba(0,0,0,.42)'; ctx.fillRect(-w/2,-27,w,5);
         ctx.fillStyle=e.slow>0?'#bae6fd':'#86efac'; ctx.fillRect(-w/2,-27,hpw,5);
@@ -502,7 +580,7 @@
     document.getElementById('again').addEventListener('click',reset);
     document.getElementById('restartTop').addEventListener('click',reset);
     window.addEventListener('resize',resize);
-    resize(); reset(); requestAnimationFrame(t=>{last=t; requestAnimationFrame(loop);});
+    resize(); reset(); loadAssets(); requestAnimationFrame(t=>{last=t; requestAnimationFrame(loop);});
   </script>
 </body>
 </html>
