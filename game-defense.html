@@ -4,17 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#070914" />
-  <title>如翼守卫战 · 第 1 关</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%237c6ef7'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='900'%3E%E7%BF%BC%3C/text%3E%3C/svg%3E" />
+  <title>青崖守印 · 第十三站</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     :root{
-      --bg:#070914;--panel:rgba(12,15,31,.78);--line:rgba(255,255,255,.14);
+      --bg:#070914;--line:rgba(255,255,255,.14);
       --text:#f8f4ff;--muted:#aab1c4;--pink:#e06cfa;--violet:#7c6ef7;--cyan:#06b6d4;--gold:#facc15;--danger:#fb7185;
     }
     body{
       min-height:100vh;overflow:hidden;background:
-        radial-gradient(circle at 20% 12%,rgba(224,108,250,.2),transparent 30%),
-        radial-gradient(circle at 82% 22%,rgba(6,182,212,.17),transparent 28%),
+        radial-gradient(circle at 20% 12%,rgba(224,108,250,.18),transparent 30%),
+        radial-gradient(circle at 82% 22%,rgba(6,182,212,.15),transparent 28%),
         linear-gradient(180deg,#070914,#101226 62%,#080b14);
       color:var(--text);font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
       -webkit-tap-highlight-color:transparent;user-select:none;
@@ -22,57 +23,103 @@
     button,a{font:inherit}
     a{color:inherit;text-decoration:none}
     .shell{width:min(1180px,100vw);height:100vh;margin:0 auto;display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:12px}
-    .hud,.tower-bar,.toast,.modal-card{
+    .hud,.tower-bar,.toast,.modal-card,.tower-panel{
       border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.045));
       box-shadow:0 12px 36px rgba(0,0,0,.24);
     }
     .hud{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:22px}
     .brand{display:flex;align-items:center;gap:9px;min-width:0}
     .mark{width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,var(--pink),var(--violet));display:grid;place-items:center;font-weight:900;box-shadow:0 0 28px rgba(224,108,250,.36)}
-    .title{line-height:1.1}
     .title strong{display:block;font-size:15px;letter-spacing:.04em}
     .title span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
     .stats{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-    .stat{border:1px solid rgba(255,255,255,.11);background:rgba(0,0,0,.18);border-radius:999px;padding:8px 11px;color:#eef2ff;font-size:13px;white-space:nowrap}
+    .stat{border:1px solid rgba(255,255,255,.11);background:rgba(0,0,0,.18);border-radius:999px;padding:8px 11px;color:#eef2ff;font-size:13px;white-space:nowrap;transition:.2s}
     .stat b{color:var(--gold)}
     .stat.life b{color:#86efac}.stat.wave b{color:#93c5fd}
-    .top-btn{border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);color:#dce4ff;border-radius:999px;padding:8px 11px;cursor:pointer}
+    .stat.flash{border-color:var(--danger);background:rgba(251,113,133,.22);transform:scale(1.06)}
+    .top-btn{border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);color:#dce4ff;border-radius:999px;padding:8px 11px;cursor:pointer;font-size:13px}
     .stage{position:relative;min-height:0;border:1px solid rgba(255,255,255,.1);border-radius:28px;overflow:hidden;background:#080c18;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03),0 24px 80px rgba(0,0,0,.32)}
     canvas{display:block;width:100%;height:100%;touch-action:manipulation}
     .hint{
       position:absolute;left:14px;bottom:14px;max-width:min(460px,calc(100% - 28px));
       padding:10px 12px;border-radius:16px;background:rgba(6,9,20,.68);border:1px solid rgba(255,255,255,.1);
-      color:#d8e0f4;font-size:13px;line-height:1.55;pointer-events:none;
+      color:#d8e0f4;font-size:13px;line-height:1.55;pointer-events:none;transition:opacity .8s;
     }
-    .tower-bar{display:grid;grid-template-columns:1.2fr repeat(4,1fr) auto;gap:8px;padding:10px;border-radius:24px;align-items:stretch}
-    .wave-card{padding:11px 12px;border-radius:18px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.09)}
-    .wave-card strong{font-size:14px}.wave-card p{color:var(--muted);font-size:12px;line-height:1.45;margin-top:4px}
-    .tower-btn,.primary{
-      border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);border-radius:18px;color:#f7f3ff;cursor:pointer;
-      padding:10px 9px;text-align:left;transition:.16s;position:relative;overflow:hidden;
-    }
-    .tower-btn:before{content:"";position:absolute;inset:auto 10px 8px 10px;height:2px;background:var(--tower);box-shadow:0 0 16px var(--tower)}
-    .tower-btn.active{border-color:var(--tower);background:color-mix(in srgb,var(--tower) 18%,rgba(255,255,255,.06));transform:translateY(-1px)}
-    .tower-btn small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
-    .primary{display:flex;align-items:center;justify-content:center;text-align:center;background:linear-gradient(135deg,var(--pink),var(--violet));border:0;font-weight:900;min-width:130px;box-shadow:0 12px 34px rgba(124,110,247,.3)}
-    .primary:disabled{filter:grayscale(.7);opacity:.55;cursor:not-allowed}
+    .hint.fade{opacity:0}
     .toast{
       position:absolute;left:50%;top:78px;transform:translateX(-50%);border-radius:999px;padding:10px 16px;color:#f9fbff;font-size:14px;
       opacity:0;pointer-events:none;transition:.25s;z-index:5;white-space:nowrap;
     }
     .toast.show{opacity:1;transform:translateX(-50%) translateY(4px)}
+    /* 塔面板 */
+    .tower-panel{
+      position:absolute;right:14px;top:14px;width:230px;border-radius:20px;padding:14px;z-index:6;
+      display:none;flex-direction:column;gap:8px;background:rgba(10,13,28,.92);
+    }
+    .tower-panel.show{display:flex}
+    .tower-panel h3{font-size:15px;display:flex;justify-content:space-between;align-items:center}
+    .tower-panel h3 button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px}
+    .tower-panel p{color:var(--muted);font-size:12px;line-height:1.5}
+    .panel-btn{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#f1f5ff;border-radius:12px;padding:9px;cursor:pointer;font-size:13px}
+    .panel-btn:hover{background:rgba(255,255,255,.12)}
+    .panel-btn.gold{background:linear-gradient(135deg,rgba(250,204,21,.25),rgba(250,204,21,.1));border-color:rgba(250,204,21,.4)}
+    /* 底部栏 */
+    .tower-bar{display:grid;grid-template-columns:1.1fr repeat(4,1fr) 1.1fr auto auto;gap:8px;padding:10px;border-radius:24px;align-items:stretch}
+    .wave-card{padding:10px 12px;border-radius:18px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.09)}
+    .wave-card strong{font-size:14px}
+    .wave-card p{color:var(--muted);font-size:12px;line-height:1.45;margin-top:3px}
+    .wave-card .preview{color:#93c5fd;margin-top:4px;font-size:12px}
+    .tower-btn,.primary,.hero-card,.skill-btn{
+      border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);border-radius:18px;color:#f7f3ff;cursor:pointer;
+      padding:10px 9px;text-align:left;transition:.16s;position:relative;overflow:hidden;
+    }
+    .tower-btn:before{content:"";position:absolute;inset:auto 10px 8px 10px;height:2px;background:var(--tower);box-shadow:0 0 16px var(--tower)}
+    .tower-btn.active{border-color:var(--tower);background:color-mix(in srgb,var(--tower) 18%,rgba(255,255,255,.06));transform:translateY(-1px)}
+    .tower-btn.poor{opacity:.45}
+    .tower-btn small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+    .hero-card{display:flex;flex-direction:column;gap:5px;justify-content:center}
+    .hero-card.active{border-color:#c4b5fd;background:rgba(124,110,247,.16)}
+    .hero-card .hname{font-size:13px;font-weight:800}
+    .hero-card .hbar{height:5px;border-radius:99px;background:rgba(0,0,0,.4);overflow:hidden}
+    .hero-card .hbar i{display:block;height:100%;background:linear-gradient(90deg,#a78bfa,#c4b5fd);border-radius:99px;transition:width .2s}
+    .hero-card small{color:var(--muted);font-size:11px}
+    .skill-btn{text-align:center;font-size:12px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:74px}
+    .skill-btn:disabled{opacity:.5;cursor:not-allowed}
+    .skill-btn small{color:var(--muted);font-weight:400}
+    .primary{display:flex;align-items:center;justify-content:center;text-align:center;background:linear-gradient(135deg,var(--pink),var(--violet));border:0;font-weight:900;min-width:120px;box-shadow:0 12px 34px rgba(124,110,247,.3)}
+    .primary:disabled{filter:grayscale(.7);opacity:.55;cursor:not-allowed}
+    /* 结算 */
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
     .modal.show{display:flex}
     .modal-card{width:min(470px,100%);border-radius:30px;padding:28px;text-align:center}
-    .modal-card h1{font-size:34px;letter-spacing:-.04em;margin-bottom:10px}
-    .modal-card p{color:var(--muted);line-height:1.75;margin-bottom:18px}
+    .modal-card h1{font-size:34px;letter-spacing:-.04em;margin-bottom:6px}
+    .modal-card p{color:var(--muted);line-height:1.75;margin-bottom:14px}
+    .stars{font-size:34px;letter-spacing:.1em;margin-bottom:12px;height:42px}
+    .star{color:rgba(255,255,255,.16)}
+    .star.on{color:var(--gold);text-shadow:0 0 18px rgba(250,204,21,.6)}
     .modal-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-    .modal-actions .primary,.modal-actions .top-btn{min-width:130px;justify-content:center;text-align:center}
-    @media(max-width:820px){
-      body{overflow:auto}.shell{height:100svh;padding:8px;gap:8px}
-      .hud{align-items:flex-start}.title span{display:none}.stats{gap:6px}.stat{font-size:12px;padding:7px 9px}.top-btn{font-size:12px;padding:7px 9px}
-      .tower-bar{grid-template-columns:repeat(2,1fr);border-radius:20px}.wave-card{grid-column:1/-1}.primary{grid-column:1/-1;width:100%}
-      .tower-btn{padding:9px 10px}.hint{font-size:12px}
+    .modal-actions .primary,.modal-actions .top-btn{min-width:130px;justify-content:center;text-align:center;padding:10px 14px}
+    @media(max-width:980px){
+      .tower-bar{grid-template-columns:repeat(4,1fr)}
+      .wave-card{grid-column:1/-1}
+      .hero-card{grid-column:span 2}
+      .skill-btn{grid-column:span 2}
+      .primary{grid-column:1/-1}
+    }
+    @media(max-width:640px){
+      body{overflow:auto}
+      .shell{height:100svh;padding:8px;gap:8px}
+      .hud{align-items:flex-start;padding:8px 10px}
+      .brand{gap:6px}.mark{width:28px;height:28px;border-radius:9px;font-size:13px}
+      .title strong{font-size:13px;white-space:nowrap}
+      .title span{display:none}
+      .stats{gap:5px}.stat{font-size:12px;padding:6px 8px}.top-btn{font-size:12px;padding:6px 8px}
+      .tower-bar{grid-template-columns:repeat(2,1fr);border-radius:20px;gap:6px;padding:8px}
+      .wave-card{grid-column:1/-1}
+      .hero-card,.skill-btn{grid-column:span 1}
+      .primary{grid-column:1/-1}
+      .tower-btn{padding:8px}.hint{font-size:12px}
+      .tower-panel{width:200px;right:8px;top:8px}
     }
   </style>
 </head>
@@ -81,40 +128,57 @@
     <header class="hud">
       <div class="brand">
         <div class="mark">翼</div>
-        <div class="title"><strong>如翼守卫战</strong><span>第 1 关 · 草地入口 · 四塔开放 / 暂不升级</span></div>
+        <div class="title"><strong>青崖守印</strong><span id="levelTag">第十三站支线 · 青崖入口</span></div>
       </div>
       <div class="stats">
-        <span class="stat">🪙 金币 <b id="gold">220</b></span>
-        <span class="stat life">💎 核心 <b id="life">10</b></span>
-        <span class="stat wave">🌊 波次 <b id="wave">0/3</b></span>
+        <span class="stat">🪙 灵石 <b id="gold">250</b></span>
+        <span class="stat life">💎 核心 <b id="lives">20</b></span>
+        <span class="stat wave">🌊 波次 <b id="wave">0/5</b></span>
+        <button class="top-btn" id="speedBtn" type="button">▶ 1×</button>
+        <button class="top-btn" id="muteBtn" type="button">🔊</button>
         <a class="top-btn" href="./arcade.html">大厅</a>
         <button class="top-btn" id="restartTop" type="button">重开</button>
       </div>
     </header>
 
     <main class="stage">
-      <canvas id="game" aria-label="如翼守卫战游戏画面"></canvas>
-      <div class="toast" id="toast">请选择一个塔，再点击塔位建造。</div>
-      <p class="hint" id="hint">素材加载完成后，选择底部防御塔并点击发光塔位建造。第 1 关所有塔只能 Lv.1，挡住 3 波敌人即可胜利。</p>
+      <canvas id="game" aria-label="青崖守印塔防游戏画面"></canvas>
+      <div class="toast" id="toast"></div>
+      <p class="hint" id="hint">选塔 → 点发光塔位建造；点塔可升级/出售；点沈烬明可调度站位；云翼营可设集结点。</p>
+      <div class="tower-panel" id="towerPanel">
+        <h3><span id="panelName">塔</span><button id="panelClose" type="button">✕</button></h3>
+        <p id="panelInfo"></p>
+        <button class="panel-btn gold" id="upgradeBtn" type="button">升级</button>
+        <button class="panel-btn" id="rallyBtn" type="button">设集结点</button>
+        <button class="panel-btn" id="sellBtn" type="button">出售</button>
+      </div>
     </main>
 
-    <footer class="tower-bar" aria-label="防御塔选择">
+    <footer class="tower-bar" aria-label="防御塔与英雄">
       <div class="wave-card">
         <strong id="statusTitle">准备防守</strong>
-        <p id="statusText">建议先用光箭塔清小怪，再用翼兵营拖住敌人，灵感炮塔适合怪物聚集时。</p>
+        <p id="statusText">选择底部防御塔，点击发光塔位建造。</p>
+        <p class="preview" id="wavePreview"></p>
       </div>
-      <button class="tower-btn active" type="button" data-tower="arrow" style="--tower:#a78bfa">光箭塔 <small>50 金币 · 极快补刀</small></button>
-      <button class="tower-btn" type="button" data-tower="magic" style="--tower:#22d3ee">星咒塔 <small>80 金币 · 慢速高伤</small></button>
-      <button class="tower-btn" type="button" data-tower="barracks" style="--tower:#f0f9ff">翼兵营 <small>75 金币 · 下场拦截</small></button>
-      <button class="tower-btn" type="button" data-tower="cannon" style="--tower:#fb923c">灵感炮塔 <small>100 金币 · 慢速群伤</small></button>
+      <button class="tower-btn active" type="button" data-tower="crossbow" style="--tower:#a78bfa">灵弩台 <small>60 · 极快补刀</small></button>
+      <button class="tower-btn" type="button" data-tower="talisman" style="--tower:#22d3ee">符咒楼 <small>90 · 法术高伤</small></button>
+      <button class="tower-btn" type="button" data-tower="barracks" style="--tower:#f0f9ff">云翼营 <small>80 · 翼卫拦截</small></button>
+      <button class="tower-btn" type="button" data-tower="mortar" style="--tower:#fb923c">雷火瓮 <small>110 · 范围群伤</small></button>
+      <button class="hero-card" id="heroCard" type="button">
+        <span class="hname">沈烬明 <small id="heroLv">Lv.1</small></span>
+        <span class="hbar"><i id="heroHp" style="width:100%"></i></span>
+        <small>点击调度站位</small>
+      </button>
+      <button class="skill-btn" id="skillBtn" type="button" disabled>破围斩<small id="skillCd">Lv.3解锁</small></button>
       <button class="primary" id="startWave" type="button">开始第 1 波</button>
     </footer>
   </div>
 
-  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
     <div class="modal-card">
-      <h1 id="modalTitle">胜利</h1>
-      <p id="modalText">第一道入口守住了，灵感核心开始重新发光。</p>
+      <h1 id="modalTitle">防守成功</h1>
+      <div class="stars" id="modalStars"></div>
+      <p id="modalText"></p>
       <div class="modal-actions">
         <button class="primary" id="again" type="button">再来一次</button>
         <a class="top-btn" href="./arcade.html">返回大厅</a>
@@ -122,508 +186,11 @@
     </div>
   </div>
 
+  <script src="./game/levels.js"></script>
+  <script src="./game/engine.js"></script>
   <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    const goldEl = document.getElementById('gold');
-    const lifeEl = document.getElementById('life');
-    const waveEl = document.getElementById('wave');
-    const startBtn = document.getElementById('startWave');
-    const toastEl = document.getElementById('toast');
-    const statusTitle = document.getElementById('statusTitle');
-    const statusText = document.getElementById('statusText');
-    const modal = document.getElementById('modal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalText = document.getElementById('modalText');
-
-    const IS_MOBILE = matchMedia('(max-width: 820px)').matches || navigator.maxTouchPoints > 1;
-    const DPR = IS_MOBILE ? 1 : Math.min(window.devicePixelRatio || 1, 1.25);
-    const FRAME_MS = IS_MOBILE ? 33 : 25;
-    const towers = {
-      arrow: {name:'光箭塔', cost:50, range:132, cooldown:.28, damage:5, color:'#a78bfa', kind:'single', role:'极快单体，适合清小怪和补刀'},
-      magic: {name:'星咒塔', cost:80, range:148, cooldown:1.05, damage:26, color:'#22d3ee', kind:'single', role:'慢速高伤，适合打石甲怪'},
-      barracks: {name:'翼兵营', cost:75, range:118, cooldown:.58, damage:4, color:'#f0f9ff', kind:'block', role:'派出翼兵下场拦截，拖住敌人'},
-      cannon: {name:'灵感炮塔', cost:100, range:126, cooldown:1.34, damage:21, color:'#fb923c', kind:'splash', role:'慢速范围爆炸，适合打成群敌人'}
-    };
-    const waves = [
-      [{type:'slime', count:5, gap:.78}],
-      [{type:'slime', count:6, gap:.65}, {type:'runner', count:3, gap:.58}],
-      [{type:'slime', count:8, gap:.58}, {type:'tank', count:1, gap:1.05}]
-    ];
-    const enemyDefs = {
-      slime:{name:'小史莱姆', hp:30, speed:54, reward:10, leak:1, color:'#34d399'},
-      runner:{name:'疾跑虫', hp:20, speed:86, reward:12, leak:1, color:'#fb923c'},
-      tank:{name:'石甲怪', hp:90, speed:36, reward:24, leak:2, color:'#9ca3af'}
-    };
-    const assetSources = {
-      map: './game-assets/defense/maps/map-level-1.webp',
-      arrow: './game-assets/defense/sprites/tower-arrow.webp',
-      magic: './game-assets/defense/sprites/tower-magic.webp',
-      barracks: './game-assets/defense/sprites/tower-barracks.webp',
-      cannon: './game-assets/defense/sprites/tower-cannon.webp',
-      slime: './game-assets/defense/sprites/enemy-slime.webp',
-      runner: './game-assets/defense/sprites/enemy-runner.webp',
-      tank: './game-assets/defense/sprites/enemy-tank.webp',
-      soldier: './game-assets/defense/sprites/soldier-wing.webp'
-    };
-    const assets = {};
-    let assetsReady = false;
-
-    let W=0,H=0,path=[],slots=[],totalPathLen=0,staticLayer=null,staticCtx=null;
-    let selected='arrow', gold=220, life=10, waveIndex=0, running=false, finished=false;
-    let enemies=[], placed=[], shots=[], particles=[], floats=[];
-    let spawnQueue=[], spawnTimer=0, last=performance.now(), lastDraw=0, toastTimer=0;
-
-    function loadAssets(){
-      setStatus('素材加载中','正在加载地图、塔和角色素材。加载完再开始，可以避免边玩边卡。');
-      startBtn.disabled = true;
-      const entries = Object.entries(assetSources);
-      return Promise.all(entries.map(([key, src]) => new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => { assets[key] = img; resolve(); };
-        img.onerror = () => { console.warn('素材加载失败', src); resolve(); };
-        img.src = src;
-      }))).then(()=>{
-        assetsReady = true;
-        buildStaticLayer();
-        setStatus('准备防守','选择一个塔，然后点击地图上的发光塔位。素材已加载，移动、攻击和受伤反馈会保持轻量播放。');
-        updateStartButton();
-      });
-    }
-
-    function resize(){
-      const rect = canvas.parentElement.getBoundingClientRect();
-      W = Math.max(320, Math.floor(rect.width));
-      H = Math.max(260, Math.floor(rect.height));
-      canvas.width = Math.floor(W * DPR);
-      canvas.height = Math.floor(H * DPR);
-      ctx.setTransform(DPR,0,0,DPR,0,0);
-      buildMap();
-      buildStaticLayer();
-    }
-    function buildMap(){
-      const y = H * .42;
-      path = [
-        {x:W*.02,y:H*.38},{x:W*.17,y:H*.39},{x:W*.31,y:H*.41},{x:W*.39,y:H*.30},
-        {x:W*.48,y:H*.39},{x:W*.61,y:H*.37},{x:W*.72,y:H*.50},{x:W*.83,y:H*.51},{x:W*.94,y:H*.43}
-      ];
-      totalPathLen = 0;
-      for(let i=0;i<path.length-1;i++) totalPathLen += distance(path[i],path[i+1]);
-      slots = [
-        {x:W*.352,y:H*.235,r:26,tower:null},
-        {x:W*.634,y:H*.238,r:26,tower:null},
-        {x:W*.421,y:H*.552,r:26,tower:null},
-        {x:W*.671,y:H*.682,r:26,tower:null}
-      ];
-      placed.forEach(t=>{
-        const s = slots[t.slotIndex];
-        if(!s) return;
-        t.x = s.x; t.y = s.y; s.tower = t;
-      });
-    }
-    function reset(){
-      selected='arrow'; gold=220; life=10; waveIndex=0; running=false; finished=false;
-      enemies=[]; placed=[]; shots=[]; particles=[]; floats=[]; spawnQueue=[]; spawnTimer=0;
-      slots.forEach(s=>s.tower=null); modal.classList.remove('show');
-      document.querySelectorAll('.tower-btn').forEach(b=>b.classList.toggle('active', b.dataset.tower === selected));
-      setStatus('准备防守','选择一个塔，然后点击地图上的发光塔位。第 1 关不能升级，但四种塔都能建造。');
-      updateHud(); updateStartButton(); addBurst(W*.5,H*.5,'#7c6ef7',10,.7);
-    }
-    function updateHud(){
-      goldEl.textContent = gold;
-      lifeEl.textContent = Math.max(0, life);
-      waveEl.textContent = `${Math.min(waveIndex,3)}/3`;
-    }
-    function setStatus(title,text){ statusTitle.textContent=title; statusText.textContent=text; }
-    function showToast(text){
-      toastEl.textContent=text; toastEl.classList.add('show'); toastTimer=1.8;
-    }
-    function updateStartButton(){
-      const hasActive = running || spawnQueue.length || enemies.length;
-      startBtn.disabled = !assetsReady || finished || hasActive || waveIndex >= waves.length;
-      startBtn.textContent = !assetsReady ? '素材加载中' : waveIndex >= waves.length ? '防守完成' : `开始第 ${waveIndex + 1} 波`;
-    }
-    function distance(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
-    function lerp(a,b,t){ return a+(b-a)*t; }
-    function pathLength(){
-      return totalPathLen;
-    }
-    function pointOnPath(dist){
-      let left = dist;
-      for(let i=0;i<path.length-1;i++){
-        const a=path[i], b=path[i+1], seg=distance(a,b);
-        if(left <= seg){ const t=left/seg; return {x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t), angle:Math.atan2(b.y-a.y,b.x-a.x)}; }
-        left -= seg;
-      }
-      return {...path[path.length-1], angle:0};
-    }
-    function startWave(){
-      if(!assetsReady){ showToast('素材还在加载，请稍等一下。'); return; }
-      if(finished || running || spawnQueue.length || enemies.length) return;
-      if(waveIndex >= waves.length) return;
-      spawnQueue = [];
-      waves[waveIndex].forEach(group=>{
-        for(let i=0;i<group.count;i++) spawnQueue.push({type:group.type, delay:i*group.gap});
-      });
-      spawnQueue.sort((a,b)=>a.delay-b.delay);
-      spawnTimer = 0; running = true;
-      setStatus(`第 ${waveIndex + 1} 波来袭`, waveIndex === 0 ? '小史莱姆正在接近核心。' : waveIndex === 1 ? '疾跑虫速度很快，注意前置输出。' : '石甲怪血量很厚，星咒塔会更有效。');
-      updateStartButton();
-    }
-    function spawnEnemy(type){
-      const def = enemyDefs[type];
-      const p = pointOnPath(0);
-      enemies.push({type, x:p.x, y:p.y, dist:0, hp:def.hp, maxHp:def.hp, speed:def.speed, slow:0, block:0, hit:0, alive:true});
-    }
-    function placeTower(x,y){
-      if(finished) return;
-      let hitIndex = slots.findIndex(s=>!s.tower && Math.hypot(x-s.x,y-s.y) < 38);
-      let hit = slots[hitIndex];
-      if(!hit){ showToast('请点击发光塔位建造。'); return; }
-      const cfg = towers[selected];
-      if(gold < cfg.cost){ showToast(`金币不足，${cfg.name}需要 ${cfg.cost} 金币。`); return; }
-      gold -= cfg.cost;
-      const tower = {type:selected, slotIndex:hitIndex, x:hit.x, y:hit.y, level:1, cd:Math.random()*.2, pulse:0, born:.26, fire:0, guardTime:0, guardX:hit.x, guardY:hit.y, soldiers: selected==='barracks' ? 2 : 0};
-      hit.tower = tower; placed.push(tower);
-      addSummon(hit.x,hit.y,cfg.color); addFloat(hit.x,hit.y-34,`-${cfg.cost}`,'#facc15');
-      setStatus(`${cfg.name}已建造`,`${cfg.role}。第 1 关暂不开放升级。`);
-      updateHud();
-    }
-    function findTarget(t, range){
-      let best=null, bestDist=-1;
-      for(const e of enemies){
-        if(!e.alive) continue;
-        const d = Math.hypot(e.x-t.x,e.y-t.y);
-        if(d <= range && e.dist > bestDist){ best=e; bestDist=e.dist; }
-      }
-      return best;
-    }
-    function damageEnemy(e, dmg, color, splash=false){
-      if(!e || !e.alive) return;
-      e.hp -= dmg; e.hit = .14;
-      addFloat(e.x,e.y-28,Math.round(dmg),color,splash ? 20 : 17);
-      addImpact(e.x,e.y,color,splash);
-      addBurst(e.x,e.y,color,splash?9:4,splash?.48:.34);
-      if(e.hp <= 0){
-        e.alive=false;
-        const def = enemyDefs[e.type]; gold += def.reward;
-        addFloat(e.x,e.y-16,`+${def.reward}`,'#facc15',16);
-        addDeath(e);
-        updateHud();
-      }
-    }
-    function updateTowers(dt){
-      for(const t of placed){
-        const cfg = towers[t.type]; t.cd -= dt; t.pulse += dt; t.born = Math.max(0, (t.born || 0) - dt); t.fire = Math.max(0, (t.fire || 0) - dt); t.guardTime = Math.max(0, (t.guardTime || 0) - dt);
-        if(t.cd > 0) continue;
-        const target = findTarget(t,cfg.range);
-        if(!target) continue;
-        t.cd = cfg.cooldown;
-        t.fire = .18;
-        if(cfg.kind === 'block'){
-          target.block = Math.max(target.block, .46);
-          target.slow = Math.max(target.slow, .85);
-          t.guardX = target.x; t.guardY = target.y;
-          t.guardTime = .42;
-          shots.push({kind:'slash', x:target.x-20, y:target.y-8, tx:target.x+12, ty:target.y+8, life:.24, max:.24, color:cfg.color, target});
-          damageEnemy(target,cfg.damage,cfg.color);
-        } else {
-          shots.push({kind:cfg.kind, x:t.x, y:t.y, sx:t.x, sy:t.y, tx:target.x, ty:target.y, life:0, dur:t.type==='magic'?.38:t.type==='cannon'?.44:.26, color:cfg.color, target, damage:cfg.damage, splash:cfg.kind==='splash'});
-        }
-      }
-    }
-    function updateShots(dt){
-      for(const s of shots){
-        if(s.kind === 'slash'){ s.life -= dt; continue; }
-        s.life += dt; const p = Math.min(1, s.life / s.dur);
-        s.x = lerp(s.sx,s.tx,p); s.y = lerp(s.sy,s.ty,p);
-        if(p >= 1 && !s.done){
-          s.done = true;
-          if(s.splash){
-            for(const e of enemies){ if(e.alive && Math.hypot(e.x-s.tx,e.y-s.ty)<54) damageEnemy(e,s.damage,s.color,true); }
-          } else damageEnemy(s.target,s.damage,s.color);
-        }
-      }
-      shots = shots.filter(s => s.kind==='slash' ? s.life>0 : !s.done || s.life < s.dur + .05);
-    }
-    function updateEnemies(dt){
-      const totalLen = pathLength();
-      for(const e of enemies){
-        if(!e.alive) continue;
-        const slowFactor = e.block > 0 ? .05 : e.slow > 0 ? .55 : 1;
-        e.slow = Math.max(0, e.slow - dt); e.block = Math.max(0, e.block - dt); e.hit = Math.max(0, e.hit - dt);
-        e.dist += e.speed * slowFactor * dt;
-        if(e.dist >= totalLen){
-          e.alive=false; life -= enemyDefs[e.type].leak; addBurst(path[path.length-1].x,path[path.length-1].y,'#fb7185',9,.55);
-          updateHud();
-          if(life <= 0) finish(false);
-        } else {
-          const p = pointOnPath(e.dist); e.x=p.x; e.y=p.y; e.angle=p.angle;
-        }
-      }
-      enemies = enemies.filter(e=>e.alive);
-    }
-    function updateSpawns(dt){
-      if(!running) return;
-      spawnTimer += dt;
-      while(spawnQueue.length && spawnQueue[0].delay <= spawnTimer){ spawnEnemy(spawnQueue.shift().type); }
-      if(!spawnQueue.length && !enemies.length){
-        running=false; waveIndex++; updateHud();
-        if(waveIndex >= waves.length) finish(true);
-        else { setStatus(`第 ${waveIndex} 波守住了`,`灵感核心还剩 ${life} 点。可以继续补塔，然后开始下一波。`); addBurst(W*.5,H*.18,'#86efac',10,.6); }
-        updateStartButton();
-      }
-    }
-    function updateEffects(dt){
-      particles.forEach(p=>{ p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=p.g*dt; p.r*=.985; });
-      floats.forEach(f=>{ f.life-=dt; f.y-=24*dt; f.alpha=Math.max(0,f.life/f.max); });
-      particles = particles.filter(p=>p.life>0 && p.r>.4).slice(IS_MOBILE ? -45 : -70);
-      floats = floats.filter(f=>f.life>0).slice(-18);
-      if(toastTimer>0){ toastTimer-=dt; if(toastTimer<=0) toastEl.classList.remove('show'); }
-    }
-    function finish(win){
-      if(finished) return; finished=true; running=false; spawnQueue=[]; updateStartButton();
-      if(win){
-        modalTitle.textContent='防守成功';
-        modalText.textContent=`第一道入口守住了，灵感核心开始重新发光。剩余核心生命：${life}/10。`;
-        addBurst(W*.5,H*.5,'#facc15',18,.9);
-      } else {
-        modalTitle.textContent='核心失守';
-        modalText.textContent='混沌突破了入口。调整塔位组合，再试一次吧。';
-      }
-      setTimeout(()=>modal.classList.add('show'),420);
-    }
-    function addFloat(x,y,text,color,size=15){ floats.push({x,y,text,color,size,life:.8,max:.8,alpha:1}); }
-    function addImpact(x,y,color,splash=false){
-      particles.push({x,y,r:splash?46:25,vx:0,vy:0,life:splash?.34:.24,max:splash?.34:.24,g:0,color,ring:true});
-      particles.push({x,y,r:splash?18:10,vx:0,vy:0,life:.12,max:.12,g:0,color:'#ffffff',ring:true});
-    }
-    function addBurst(x,y,color,count=12,power=.6){
-      for(let i=0;i<count;i++){
-        const a=Math.random()*Math.PI*2, sp=(30+Math.random()*90)*power;
-        particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:2+Math.random()*3,life:.35+Math.random()*.45,g:10,color});
-      }
-    }
-    function addSummon(x,y,color){
-      addBurst(x,y,color,10,.46);
-      particles.push({x,y,r:38,vx:0,vy:0,life:.42,max:.42,g:0,color,ring:true});
-    }
-    function addDeath(e){
-      const color = e.type==='runner' ? '#fb923c' : e.type==='tank' ? '#c4b5fd' : '#34d399';
-      addBurst(e.x,e.y,color,e.type==='tank'?10:7,e.type==='runner'?.62:.48);
-    }
-    function buildStaticLayer(){
-      staticLayer = document.createElement('canvas');
-      staticLayer.width = Math.floor(W * DPR);
-      staticLayer.height = Math.floor(H * DPR);
-      staticCtx = staticLayer.getContext('2d');
-      staticCtx.setTransform(DPR,0,0,DPR,0,0);
-      const c = staticCtx;
-      if(assets.map){
-        c.drawImage(assets.map, 0, 0, W, H);
-        c.fillStyle='rgba(5,8,18,.08)';
-        c.fillRect(0,0,W,H);
-      } else {
-        const g=c.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0b1020'); g.addColorStop(1,'#070914'); c.fillStyle=g; c.fillRect(0,0,W,H);
-        c.strokeStyle='rgba(255,255,255,.026)'; c.lineWidth=1;
-        for(let x=0;x<W;x+=56){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke();}
-        for(let y=0;y<H;y+=56){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();}
-        const rg=c.createRadialGradient(W*.22,H*.24,0,W*.22,H*.24,W*.36); rg.addColorStop(0,'rgba(224,108,250,.10)'); rg.addColorStop(1,'transparent'); c.fillStyle=rg; c.fillRect(0,0,W,H);
-        drawPath(c);
-      }
-    }
-    function drawBg(){
-      if(staticLayer) ctx.drawImage(staticLayer,0,0,W,H);
-      else { ctx.fillStyle='#070914'; ctx.fillRect(0,0,W,H); }
-    }
-    function drawPath(c=ctx){
-      c.lineCap='round'; c.lineJoin='round';
-      c.strokeStyle='rgba(255,255,255,.08)'; c.lineWidth=46; drawPolyline(c);
-      c.strokeStyle='rgba(124,110,247,.22)'; c.lineWidth=32; drawPolyline(c);
-      c.strokeStyle='rgba(6,182,212,.16)'; c.lineWidth=5; c.setLineDash([14,18]); drawPolyline(c); c.setLineDash([]);
-      c.fillStyle='rgba(52,211,153,.16)'; c.beginPath(); c.arc(path[0].x,path[0].y,18,0,Math.PI*2); c.fill();
-      c.fillStyle='rgba(250,204,21,.23)'; c.beginPath(); c.arc(path[path.length-1].x,path[path.length-1].y,24,0,Math.PI*2); c.fill();
-      c.fillStyle='#d9f99d'; c.font='700 12px sans-serif'; c.fillText('入口',path[0].x-14,path[0].y-30);
-      c.fillStyle='#fde68a'; c.fillText('核心',path[path.length-1].x-14,path[path.length-1].y-34);
-    }
-    function drawPolyline(c=ctx){ c.beginPath(); c.moveTo(path[0].x,path[0].y); for(let i=1;i<path.length;i++) c.lineTo(path[i].x,path[i].y); c.stroke(); }
-    function drawSlots(){
-      slots.forEach((s,i)=>{
-        const pulse = .45 + Math.sin(performance.now()/520 + i)*.16;
-        const on = !!s.tower;
-        ctx.save();
-        ctx.translate(s.x, s.y);
-        ctx.fillStyle=on ? 'rgba(124,110,247,.16)' : 'rgba(255,255,255,.045)';
-        ctx.beginPath(); ctx.ellipse(0,0,34,18,0,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle=on ? 'rgba(224,108,250,.62)' : `rgba(255,255,255,${pulse})`; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.ellipse(0,0,34,18,0,0,Math.PI*2); ctx.stroke();
-        ctx.strokeStyle=on ? 'rgba(6,182,212,.34)' : `rgba(224,108,250,${pulse})`; ctx.lineWidth=3;
-        ctx.beginPath(); ctx.ellipse(0,0,24,12,0,0,Math.PI*2); ctx.stroke();
-        if(!on){
-          ctx.fillStyle='rgba(255,255,255,.78)'; ctx.font='800 17px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+',0,-1);
-        }
-        ctx.restore();
-      });
-      ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    }
-    function drawTower(t){
-      const cfg=towers[t.type];
-      ctx.save(); ctx.translate(t.x,t.y);
-      const img = assets[t.type];
-      const bob = Math.sin(performance.now()/650 + t.slotIndex) * 1.2;
-      if(img){
-        const fireScale = 1 + (t.fire || 0) * .55;
-        const bornScale = t.born > 0 ? 1 - (t.born / .26) * .2 : 1;
-        const baseW = t.type==='barracks' ? 76 : t.type==='cannon' ? 72 : 66;
-        const scale = fireScale * bornScale;
-        const drawW = baseW * scale;
-        const drawH = drawW * (img.height / img.width);
-        const anchor = getTowerAnchor(t.type, drawW, drawH);
-        ctx.shadowColor=cfg.color; ctx.shadowBlur=IS_MOBILE ? 0 : 6;
-        ctx.save();
-        if(t.type==='cannon'){
-          ctx.rotate(.48);
-          ctx.drawImage(img, -anchor.x, -anchor.y + bob, drawW*1.18, drawH*1.18);
-        } else {
-          ctx.drawImage(img, -anchor.x, -anchor.y + bob, drawW, drawH);
-        }
-        ctx.restore();
-        ctx.shadowBlur=0;
-        if(t.type==='barracks') drawBarracksSoldiers(t);
-        ctx.restore();
-        return;
-      }
-      ctx.shadowColor=cfg.color; ctx.shadowBlur=IS_MOBILE ? 0 : 7;
-      if(t.type==='barracks'){
-        ctx.fillStyle='rgba(255,255,255,.1)'; ctx.beginPath(); ctx.roundRect(-22,-16,44,36,10); ctx.fill();
-        ctx.fillStyle=cfg.color; ctx.beginPath(); ctx.roundRect(-16,-24,32,38,12); ctx.fill();
-        ctx.shadowBlur=0; ctx.strokeStyle='rgba(124,110,247,.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,-1,22,Math.PI*.08,Math.PI*.92); ctx.stroke();
-        for(let i=0;i<2;i++){
-          const ox = i ? 15 : -15, bob=Math.sin(performance.now()/360+i)*1.4;
-          ctx.fillStyle='#eef6ff'; ctx.beginPath(); ctx.arc(ox,24+bob,7,0,Math.PI*2); ctx.fill();
-          ctx.strokeStyle='rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(ox-7,22+bob,8,Math.PI*.9,Math.PI*1.55); ctx.stroke();
-          ctx.beginPath(); ctx.arc(ox+7,22+bob,8,Math.PI*1.45,Math.PI*.1); ctx.stroke();
-        }
-      } else if(t.type==='cannon'){
-        ctx.fillStyle='#251326'; ctx.beginPath(); ctx.roundRect(-19,-13,38,34,10); ctx.fill();
-        ctx.fillStyle=cfg.color; ctx.beginPath(); ctx.roundRect(-12,-28,24,28,8); ctx.fill();
-        ctx.fillStyle='#ffd7a8'; ctx.beginPath(); ctx.arc(0,-30,9,0,Math.PI*2); ctx.fill();
-      } else {
-        ctx.fillStyle=cfg.color; ctx.beginPath(); ctx.roundRect(-15,-28,30,44,12); ctx.fill();
-        ctx.fillStyle='rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(0,-30,t.type==='magic'?10:7,0,Math.PI*2); ctx.fill();
-      }
-      ctx.shadowBlur=0; ctx.restore();
-    }
-    function getTowerAnchor(type, w, h){
-      if(type==='cannon') return {x:w*.52, y:h*.83};
-      if(type==='barracks') return {x:w*.50, y:h*.84};
-      if(type==='magic') return {x:w*.50, y:h*.86};
-      if(type==='arrow') return {x:w*.50, y:h*.88};
-      return {x:w*.5, y:h};
-    }
-    function drawBarracksSoldiers(t){
-      const img = assets.soldier;
-      if(!img) return;
-      for(let i=0;i<2;i++){
-        const active = t.guardTime > 0;
-        const baseX = active ? (t.guardX - t.x) : 0;
-        const baseY = active ? (t.guardY - t.y) : 30;
-        const ox = active ? (i ? 11 : -11) : (i ? 21 : -21);
-        const oy = baseY + Math.sin(performance.now()/420+i)*1.2;
-        ctx.save();
-        ctx.translate(baseX + ox, oy);
-        ctx.scale(i ? -1 : 1, 1);
-        ctx.globalAlpha = active ? 1 : .95;
-        const s = active ? 32 : 28;
-        ctx.drawImage(img, -s/2, -s*.78, s, s * (img.height/img.width));
-        ctx.restore();
-      }
-    }
-    function drawEnemies(){
-      for(const e of enemies){
-        const def=enemyDefs[e.type]; ctx.save(); ctx.translate(e.x,e.y);
-        const img = assets[e.type];
-        const drawSize = e.type==='tank' ? 66 : e.type==='runner' ? 50 : 48;
-        const bob = Math.sin(performance.now()/210 + e.dist*.03) * (e.type==='tank' ? .8 : 1.8);
-        if(e.hit>0) ctx.globalAlpha=.72;
-        ctx.shadowColor=def.color; ctx.shadowBlur=IS_MOBILE ? 0 : 5;
-        if(img){
-          if(e.type==='runner') ctx.rotate(Math.sin(performance.now()/130)*.05);
-          ctx.drawImage(img, -drawSize/2, -drawSize*.62 + bob, drawSize, drawSize * (img.height/img.width));
-          if(e.hit>0){
-            ctx.globalCompositeOperation='source-atop';
-            ctx.fillStyle='rgba(255,255,255,.78)';
-            ctx.fillRect(-drawSize/2, -drawSize*.62 + bob, drawSize, drawSize * (img.height/img.width));
-            ctx.globalCompositeOperation='source-over';
-          }
-        } else {
-          if(e.hit>0){ ctx.globalAlpha=.92; ctx.fillStyle='#fff'; } else ctx.fillStyle=def.color;
-          if(e.type==='runner'){ ctx.rotate(e.angle); ctx.beginPath(); ctx.ellipse(0,0,16,10,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.5)'; ctx.fillRect(-20,-2,8,4); }
-          else if(e.type==='tank'){ ctx.beginPath(); ctx.roundRect(-17,-15,34,30,8); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.strokeRect(-9,-7,18,14); }
-          else { ctx.beginPath(); ctx.arc(0,0,15,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.58)'; ctx.beginPath(); ctx.arc(-5,-5,3,0,Math.PI*2); ctx.arc(6,-5,3,0,Math.PI*2); ctx.fill(); }
-        }
-        ctx.shadowBlur=0; ctx.globalAlpha=1;
-        const w=36, hpw=w*Math.max(0,e.hp/e.maxHp);
-        ctx.fillStyle='rgba(0,0,0,.42)'; ctx.fillRect(-w/2,-27,w,5);
-        ctx.fillStyle=e.slow>0?'#bae6fd':'#86efac'; ctx.fillRect(-w/2,-27,hpw,5);
-        ctx.restore();
-      }
-    }
-    function drawShots(){
-      for(const s of shots){
-        ctx.save(); ctx.strokeStyle=s.color; ctx.fillStyle=s.color; ctx.shadowColor=s.color; ctx.shadowBlur=IS_MOBILE ? 0 : 6;
-        if(s.kind==='slash'){
-          ctx.globalAlpha=Math.max(0,s.life/s.max); ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.quadraticCurveTo((s.x+s.tx)/2,s.y-32,s.tx,s.ty); ctx.stroke();
-        } else {
-          ctx.globalAlpha=.32; ctx.lineWidth=s.kind==='splash'?5:3; ctx.beginPath(); ctx.moveTo(s.sx,s.sy); ctx.lineTo(s.x,s.y); ctx.stroke(); ctx.globalAlpha=1;
-          ctx.beginPath(); ctx.arc(s.x,s.y,s.kind==='splash'?8:s.kind==='single'?5:7,0,Math.PI*2); ctx.fill();
-          if(s.splash && s.done){ ctx.globalAlpha=.35; ctx.beginPath(); ctx.arc(s.tx,s.ty,54,0,Math.PI*2); ctx.stroke(); }
-        }
-        ctx.restore();
-      }
-    }
-    function drawEffects(){
-      for(const p of particles){
-        ctx.save(); ctx.globalAlpha=Math.max(0,p.life/.8); ctx.strokeStyle=p.color; ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=IS_MOBILE ? 0 : 5;
-        if(p.ring){ const max=p.max||.42, prog=1-p.life/max; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(.18+prog*.95),0,Math.PI*2); ctx.stroke(); }
-        else { ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }
-        ctx.restore();
-      }
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      for(const f of floats){ ctx.globalAlpha=f.alpha; ctx.font=`900 ${f.size||15}px Inter, sans-serif`; ctx.fillStyle='rgba(0,0,0,.32)'; ctx.fillText(f.text,f.x+1,f.y+1); ctx.fillStyle=f.color; ctx.fillText(f.text,f.x,f.y); }
-      ctx.globalAlpha=1; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    }
-    function draw(){
-      drawBg(); drawSlots();
-      placed.forEach(drawTower); drawShots(); drawEnemies(); drawEffects();
-    }
-    function loop(now){
-      if(now - lastDraw < FRAME_MS){ requestAnimationFrame(loop); return; }
-      lastDraw = now;
-      const dt = Math.min(.05,(now-last)/1000); last=now;
-      if(!finished){ updateSpawns(dt); updateTowers(dt); updateShots(dt); updateEnemies(dt); }
-      updateEffects(dt); draw(); requestAnimationFrame(loop);
-    }
-    function pointerPos(ev){
-      const rect=canvas.getBoundingClientRect();
-      const p=ev.touches?ev.touches[0]:ev;
-      return {x:(p.clientX-rect.left), y:(p.clientY-rect.top)};
-    }
-    canvas.addEventListener('pointerdown', ev=>{ const p=pointerPos(ev); placeTower(p.x,p.y); });
-    document.querySelectorAll('.tower-btn').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        selected=btn.dataset.tower;
-        document.querySelectorAll('.tower-btn').forEach(b=>b.classList.toggle('active',b===btn));
-        const cfg=towers[selected];
-        showToast(`已选择：${cfg.name}`);
-        setStatus(cfg.name, cfg.role);
-      });
-    });
-    startBtn.addEventListener('click',startWave);
-    document.getElementById('again').addEventListener('click',reset);
-    document.getElementById('restartTop').addEventListener('click',reset);
-    window.addEventListener('resize',resize);
-    resize(); reset(); loadAssets(); requestAnimationFrame(t=>{last=t; requestAnimationFrame(loop);});
+    // hint 5 秒后淡出
+    setTimeout(() => document.getElementById('hint').classList.add('fade'), 6000);
   </script>
 </body>
 </html>
